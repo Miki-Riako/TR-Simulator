@@ -11,6 +11,7 @@ from qfluentwidgets import Theme
 from qfluentwidgets import FluentIcon as FIF
 
 from .home import Home
+from .turing_machine_ui import TuringMachineUI as TM
 from .helper import Helper
 from .about import About
 from .setting import Setting
@@ -31,7 +32,7 @@ class GUI(FluentWindow):
         self.createSubInterface()
 
         self.homeInterface              = Home('Home Interface', self)
-        self.turingMachineInterface     = Widget('Turing Machine Interface', self)
+        self.turingMachineInterface     = TM('Turing Machine Interface', self)
         self.recursiveFunctionInterface = Widget('Recursive Function Interface', self)
         self.analyzerInterface          = Widget('Analyzer Interface', self)
         self.helperInterface            = Helper('Helper Interface', self)
