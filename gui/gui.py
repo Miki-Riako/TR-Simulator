@@ -12,6 +12,8 @@ from qfluentwidgets import FluentIcon as FIF
 
 from .home import Home
 from .turing_machine_ui import TuringMachineUI as TM
+from .recursive_function_ui import RecursiveFunctionUI as RF
+from .analyzer import Analyzer
 from .helper import Helper
 from .about import About
 from .setting import Setting
@@ -33,8 +35,8 @@ class GUI(FluentWindow):
 
         self.homeInterface              = Home('Home Interface', self)
         self.turingMachineInterface     = TM('Turing Machine Interface', self)
-        self.recursiveFunctionInterface = Widget('Recursive Function Interface', self)
-        self.analyzerInterface          = Widget('Analyzer Interface', self)
+        self.recursiveFunctionInterface = RF('Recursive Function Interface', self)
+        self.analyzerInterface          = Analyzer('Analyzer Interface', self)
         self.helperInterface            = Helper('Helper Interface', self)
         self.aboutInterface             = About('About Interface', self)
         self.settingInterface           = Setting('Setting Interface', self)
