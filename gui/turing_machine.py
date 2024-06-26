@@ -233,29 +233,36 @@ class TuringMachine(Interface):
             self.arr[1].append((self.arr[1][0] + self.arr[1][1]) // 2)
         else:
             self.arr[1][2] = (self.arr[1][0] + self.arr[1][1]) // 2
-        self.cur[1] = 2
-        self.next_state = 'readK'
-        self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][2]}.'))
+        self.cur[1] += 1
+        if self.cur[1] == 2:
+            self.next_state = 'readK'
+            self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][2]}.'))
     
     def readK(self):
         self.showInfo('读取目标值\nReading target value')
-        self.cur[0] = 2
-        self.next_state = 'readMid'
-        self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
+        if self.cur[0] == 2:
+            self.next_state = 'readMid'
+            self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
+        elif self.cur[0] < 2:
+            self.cur[0] += 1
+        else:
+            self.cur[0] -= 1
     
     def readMid(self):
         self.showInfo('读取中位\nReading mid bit')
-        self.cur[0] = self.arr[1][-1] + 3
-        self.next_state = 'compareMid'
-        self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][-1] + 3} and get {self.arr[0][self.arr[1][-1] + 3]}.'))
+        self.cur[0] += 1
+        if self.cur[0] == self.arr[1][2] + 3:
+            self.next_state = 'compareMid'
+            self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][2]} and get {self.arr[0][self.arr[1][2] + 3]}.'))
     
     def updateLow(self):
         self.showInfo('更新低位\nUpdating low bit')
-        self.cur[1] = 0
-        old = self.arr[1][0]
-        self.arr[1][0] = self.arr[1][-1] + 1
-        self.next_state = 'compareHigh'
-        self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][0]}.'))
+        self.cur[1] -= 1
+        if  self.cur[1] == 0:
+            old = self.arr[1][0]
+            self.arr[1][0] = self.arr[1][-1] + 1
+            self.next_state = 'compareHigh'
+            self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][0]}.'))
     
     def updateHigh(self):
         self.showInfo('更新高位\nUpdating high bit')

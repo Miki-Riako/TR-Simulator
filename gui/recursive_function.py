@@ -199,7 +199,10 @@ class RecursiveFunction(Interface):
     
     def readMid(self):
         self.showInfo('读取中位\nReading mid bit')
-        self.cur[0] = self.arr[1][0] + 3
+        self.cur[0] += 1
+        if self.cur[0] == self.arr[1][0] + 3:
+            self.next_state = 'compareMid'
+            self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][0]} and get {self.arr[0][self.arr[1][0] + 3]}.'))
     
     def compareMid(self):
         now = self.arr[0][self.arr[1][-1] + 3]
