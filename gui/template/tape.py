@@ -38,10 +38,10 @@ class InitialTape(TableWidget):
             header[0] = 'n'
             header[1] = 'k'
             self.setHorizontalHeaderLabels(header)
-            self.resizeColumnsToContents()
-            self.resizeRowsToContents()
-            for column in range(self.columnCount()):
-                self.setColumnWidth(column, self.columnWidth(column) + 10)
+            # self.resizeColumnsToContents()
+            # self.resizeRowsToContents()
+            # for column in range(self.columnCount()):
+            #     self.setColumnWidth(column, self.columnWidth(column) + 10)
         except:
             return
 
