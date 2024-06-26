@@ -2,6 +2,7 @@ import re
 
 from .template.interface import Interface
 from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QApplication, QListWidgetItem, QListWidget, QHBoxLayout
 from PySide6.QtWidgets import QTreeWidgetItem, QHBoxLayout, QTreeWidgetItemIterator, QTableWidgetItem, QListWidgetItem
 from qfluentwidgets import InfoBarIcon, InfoBar, PushButton, setTheme, Theme, FluentIcon, InfoBarPosition, InfoBarManager
@@ -97,10 +98,29 @@ class Tape(TableWidget):
         
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
+        self.default()
+
+    def default(self):
+        for row in range(self.rowCount()):
+            for column in range(self.columnCount()):
+                item = self.item(row, column)
+                if item:
+                    item.setForeground(QColor(Qt.white))
+                    item.setFont(QFont())
+    
+    def current(self, triplet):
+        self.default()
+        for i in range(3):
+            if triplet[i] == -1:
+                continue
+            item = self.item(i, triplet[i]+1)
+            if item:
+                item.setForeground(QColor(Qt.cyan))
+                item.setFont(QFont('Arial', 13, QFont.Bold))
 
 
 
-class TuringMachineUI(Interface):
+class TuringMachine(Interface):
     def __init__(self, text: str, parent=None):
         super().__init__(
             'Turing Machine Simulator',
@@ -115,8 +135,9 @@ class TuringMachineUI(Interface):
         self.simulating = False
         self.initial = InitialTape(self)
         self.tape = Tape(self)
-        self.history = []
         self.list = ListWidget(self)
+        self.cur = [-1, -1, -1]
+        self.next_state = 'initLow'
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
         self.addExampleCard('Tapes', self.tape, [], [], 1)
@@ -130,11 +151,23 @@ class TuringMachineUI(Interface):
             self.arr[0] += [int(i) for i in self.initial.infos]
             self.arr[0][1] -= 1
 
-            self.history.append(self.arr)
+            self.tape.clear()
             self.tape.set(self.arr)
-
-            ...
-            
+            self.cur = [-1, -1, -1]
+            self.next_state = 'initLow'
+            self.simulating = True
+            InfoBar.success(
+                title='开始仿真！\nStart!',
+                content='''
+                    载入成功，现在开始仿真。
+                    Loaded Successfully, now let's start the simulation. 
+                ''',
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3999,
+                parent=self
+            )
         except Exception as e:
             InfoBar.error(
                 title='失败了！\nFailed!',
@@ -146,28 +179,14 @@ class TuringMachineUI(Interface):
                 parent=self
             )
             return
-        
-        self.simulating = True
-        InfoBar.success(
-            title='开始仿真！\nStart!',
-            content='''
-                载入成功，现在开始仿真。
-                Loaded Successfully, now let's start the simulation. 
-            ''',
-            orient=Qt.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP,
-            duration=4000,
-            parent=self
-        )
 
     def addFunctions(self):
         function_list = []
         function_list.append(self.run)
         function_list.append(None)
         function_list.append(None)
-        function_list.append(None)
-        function_list.append(None)
+        function_list.append(self.reset)
+        function_list.append(self.next)
         return function_list
 
     def run(self):
@@ -193,3 +212,84 @@ class TuringMachineUI(Interface):
         btn.clicked.connect(self.simulate)
         w.addWidget(btn)
         w.show()
+
+    def showInfo(self, text):
+        InfoBar.success(
+            title='Next',
+            content=text,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=2000,
+            parent=self
+        )
+
+    def reset(self):
+        content = '''
+            这样的话要重新仿真哦，确定吗？\n
+            If you want to reset, are you sure?
+        '''
+        w = InfoBar(
+            icon=InfoBarIcon.INFORMATION,
+            title='Sure?',
+            content=content,
+            orient=Qt.Vertical,
+            isClosable=True,
+            position=InfoBarPosition.TOP_RIGHT,
+            duration=4000,
+            parent=self
+        )
+        btn = PushButton('是的    Yes, let\'s go!')
+        def r():
+            self.simulating = False
+            self.tape.clear()
+            self.list.clear()
+            InfoBar.success(
+                title='重置了！\nReset!',
+                content="已重置图灵机。\nThe Turing machine has been reset.",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+        btn.clicked.connect(r)
+        w.addWidget(btn)
+        w.show()
+
+    def next(self):
+        if not self.simulating:
+            return
+        getattr(self, self.next_state)()
+        self.tape.set(self.arr)
+        self.tape.current(self.cur)
+
+    def initLow(self):
+        self.showInfo('初始化低位\nInitializing low bit')
+        self.initLowOutput = self.arr[0][0]
+        self.next_state = 'writeLow'
+        self.list.addItem(QListWidgetItem(f'Get {self.initLowOutput}.'))
+    
+    def writeLow(self):
+        self.showInfo('写入低位\nWriting low bit')
+        self.arr[1].append(self.initLowOutput)
+        self.cur = [0, -1, -1]
+        self.next_state = 'initHigh'
+        self.list.addItem(QListWidgetItem(f'Write {self.initLowOutput} as low bit.'))
+    
+    def initHigh(self):
+        self.showInfo('初始化高位\nInitializing high bit')
+        self.initHighOutput = self.arr[0][1]
+        self.next_state = 'writeHigh'
+        self.list.addItem(QListWidgetItem(f'Get {self.initHighOutput}.'))
+    
+    def writeHigh(self):
+        self.showInfo('写入高位\nWriting high bit')
+        self.arr[1].append(self.initHighOutput)
+        self.next_state = 'compareLow'
+        self.cur = [0, -1, -1]
+        self.list.addItem(QListWidgetItem(f'Write {self.initHighOutput} as high bit.'))
+    
+    def compareLow(self):
+        self.showInfo('比较低位\nComparing low bit')
+        ...

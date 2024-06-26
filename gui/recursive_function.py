@@ -8,7 +8,7 @@ from qfluentwidgets import (
     )
 from qfluentwidgets import FluentIcon as FIF
 
-class RecursiveFunctionUI(Interface):
+class RecursiveFunction(Interface):
     def __init__(self, text: str, parent=None):
         super().__init__(
             'Recursive Function Simulator',

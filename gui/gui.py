@@ -11,8 +11,8 @@ from qfluentwidgets import Theme
 from qfluentwidgets import FluentIcon as FIF
 
 from .home import Home
-from .turing_machine_ui import TuringMachineUI as TM
-from .recursive_function_ui import RecursiveFunctionUI as RF
+from .turing_machine import TuringMachine as TM
+from .recursive_function import RecursiveFunction as RF
 from .analyzer import Analyzer
 from .helper import Helper
 from .about import About
