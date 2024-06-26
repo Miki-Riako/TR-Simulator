@@ -2,15 +2,15 @@ import re
 
 from .template.interface import Interface
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QApplication, QListWidgetItem, QListWidget, QHBoxLayout
 from PySide6.QtWidgets import QTreeWidgetItem, QHBoxLayout, QTreeWidgetItemIterator, QTableWidgetItem, QListWidgetItem
 from qfluentwidgets import InfoBarIcon, InfoBar, PushButton, setTheme, Theme, FluentIcon, InfoBarPosition, InfoBarManager
-from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipView
+from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipView, ListView
 from qfluentwidgets import FluentIcon as FIF
 
 
 
-class InputTape(TableWidget):
+class InitialTape(TableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -73,28 +73,65 @@ class InputTape(TableWidget):
 
 
 
+class Tape(TableWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.verticalHeader().hide()
+        self.setBorderRadius(8)
+        self.setBorderVisible(True)
+        self.infos = [[], [], []]
+
+    def set(self, arr):
+        self.infos = arr
+        self.setRowCount(len(self.infos))
+        self.setColumnCount(max(len(self.infos[0]), len(self.infos[1]), len(self.infos[2]))+1)
+        
+        self.setItem(0, 0, QTableWidgetItem('#input tape:'))
+        self.setItem(1, 0, QTableWidgetItem('#work tape:'))
+        self.setItem(2, 0, QTableWidgetItem('#output tape:'))
+        
+        for i in range(len(self.infos)):
+            for j in range(len(self.infos[i])):
+                self.setItem(i, j+1, QTableWidgetItem(str(self.infos[i][j])))
+        
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+
+
+
 class TuringMachineUI(Interface):
     def __init__(self, text: str, parent=None):
         super().__init__(
             'Turing Machine Simulator',
             'Binary Search Question',
             ['Run', 'Github'],
-            ['1', '2', '3'],
-            [FIF.PLAY, FIF.GITHUB, FIF.ADD, FIF.ADD, FIF.ADD],
+            ['Forward', 'Reset', 'Next'],
+            [FIF.PLAY, FIF.GITHUB, FIF.LEFT_ARROW, FIF.SYNC, FIF.RIGHT_ARROW],
             self.addFunctions,
             parent=parent
         )
         self.setObjectName(text.replace(' ', '-'))
-        self.input = InputTape(self)
+        self.simulating = False
+        self.initial = InitialTape(self)
+        self.tape = Tape(self)
+        self.history = []
+        self.list = ListWidget(self)
 
-        self.addExampleCard('Input Tape', self.input, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.input.addItem, self.input.removeItem, self.input.initial], 1)
+        self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
+        self.addExampleCard('Tapes', self.tape, [], [], 1)
+        self.addExampleCard('History', self.list, [], [], 1)
 
     def simulate(self):
         try:
-            self.input.getInfos()
-            self.arr = [int(i) for i in self.input.infos]
-            self.arr.pop(0)
-            self.arr.pop(0)
+            self.arr = [[], [], []]
+            self.initial.getInfos()
+            self.arr[0].append(0)
+            self.arr[0] += [int(i) for i in self.initial.infos]
+            self.arr[0][1] -= 1
+
+            self.history.append(self.arr)
+            self.tape.set(self.arr)
 
             ...
             
@@ -110,12 +147,12 @@ class TuringMachineUI(Interface):
             )
             return
         
+        self.simulating = True
         InfoBar.success(
             title='开始仿真！\nStart!',
             content='''
-                载入成功，现在开始仿真，注意哦，输入的纸袋将以如下形式给出：
-                Loaded Successfully, now let's start the simulation. Note that the input paper bag will be given in the following form:\n
-                input tape:[n, k, a_0, a_2 , ..., a_{n-1}]
+                载入成功，现在开始仿真。
+                Loaded Successfully, now let's start the simulation. 
             ''',
             orient=Qt.Horizontal,
             isClosable=True,
@@ -152,7 +189,7 @@ class TuringMachineUI(Interface):
             duration=10000,
             parent=self
         )
-        btn = PushButton('明白了\nI see')
+        btn = PushButton('明白了，开始吧    I see and let\'s go!')
         btn.clicked.connect(self.simulate)
         w.addWidget(btn)
         w.show()
