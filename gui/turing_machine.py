@@ -1,13 +1,15 @@
 import re
 
 from .template.interface import Interface
-from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import QUrl, QPoint, Qt
+from PySide6.QtGui import QDesktopServices, QColor, QFont
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget, QApplication, QListWidgetItem, QListWidget, QHBoxLayout
 from PySide6.QtWidgets import QTreeWidgetItem, QHBoxLayout, QTreeWidgetItemIterator, QTableWidgetItem, QListWidgetItem
 from qfluentwidgets import InfoBarIcon, InfoBar, PushButton, setTheme, Theme, FluentIcon, InfoBarPosition, InfoBarManager
 from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipView, ListView
 from qfluentwidgets import FluentIcon as FIF
+
+URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/turing_machine.py'
 
 
 
@@ -188,8 +190,8 @@ class TuringMachine(Interface):
     def addFunctions(self):
         function_list = []
         function_list.append(self.run)
-        function_list.append(None)
-        function_list.append(None)
+        function_list.append(lambda: QDesktopServices.openUrl(QUrl(URL)))
+        function_list.append(self.forward)
         function_list.append(self.reset)
         function_list.append(self.next)
         return function_list
@@ -261,6 +263,9 @@ class TuringMachine(Interface):
         btn.clicked.connect(r)
         w.addWidget(btn)
         w.show()
+
+    def forward(self):
+        self.showInfo('进入了还未实现的 0&1 世界。')
 
     def next(self):
         if not self.simulating:
