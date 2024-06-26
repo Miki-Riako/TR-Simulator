@@ -37,8 +37,10 @@ class InitialTape(TableWidget):
             header[0] = 'n'
             header[1] = 'k'
             self.setHorizontalHeaderLabels(header)
-            # self.resizeColumnsToContents()
-            # self.resizeRowsToContents()
+            self.resizeColumnsToContents()
+            self.resizeRowsToContents()
+            for column in range(self.columnCount()):
+                self.setColumnWidth(column, self.columnWidth(column) + 10)
         except:
             return
 
@@ -98,6 +100,9 @@ class Tape(TableWidget):
         
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
+        for column in range(self.columnCount()):
+            self.setColumnWidth(column, self.columnWidth(column) + 10)
+        
         self.default()
 
     def default(self):
@@ -259,6 +264,8 @@ class TuringMachine(Interface):
 
     def next(self):
         if not self.simulating:
+            self.tape.set(self.arr)
+            self.tape.current(self.cur)
             return
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
@@ -266,30 +273,115 @@ class TuringMachine(Interface):
 
     def initLow(self):
         self.showInfo('初始化低位\nInitializing low bit')
-        self.initLowOutput = self.arr[0][0]
+        self.cur[0] = 0
         self.next_state = 'writeLow'
-        self.list.addItem(QListWidgetItem(f'Get {self.initLowOutput}.'))
-    
-    def writeLow(self):
-        self.showInfo('写入低位\nWriting low bit')
-        self.arr[1].append(self.initLowOutput)
-        self.cur = [0, -1, -1]
-        self.next_state = 'initHigh'
-        self.list.addItem(QListWidgetItem(f'Write {self.initLowOutput} as low bit.'))
+        self.list.addItem(QListWidgetItem(f'Get {self.arr[0][0]}.'))
     
     def initHigh(self):
         self.showInfo('初始化高位\nInitializing high bit')
-        self.initHighOutput = self.arr[0][1]
+        self.cur[0] = 1
         self.next_state = 'writeHigh'
-        self.list.addItem(QListWidgetItem(f'Get {self.initHighOutput}.'))
+        self.list.addItem(QListWidgetItem(f'Get {self.arr[0][1]}.'))
+    
+    def writeLow(self):
+        self.showInfo('写入低位\nWriting low bit')
+        self.arr[1].append(self.arr[0][0])
+        self.cur[1] = 0
+        self.next_state = 'initHigh'
+        self.list.addItem(QListWidgetItem(f'Write {self.arr[0][0]} as low bit.'))
     
     def writeHigh(self):
         self.showInfo('写入高位\nWriting high bit')
-        self.arr[1].append(self.initHighOutput)
+        self.arr[1].append(self.arr[0][1])
+        self.cur[1] = 1
         self.next_state = 'compareLow'
-        self.cur = [0, -1, -1]
-        self.list.addItem(QListWidgetItem(f'Write {self.initHighOutput} as high bit.'))
+        self.list.addItem(QListWidgetItem(f'Write {self.arr[0][1]} as high bit.'))
     
     def compareLow(self):
         self.showInfo('比较低位\nComparing low bit')
-        ...
+        self.cur[1] = 0
+        if self.arr[1][0] > self.arr[1][1]:
+            self.next_state = 'stop'
+            self.list.addItem(QListWidgetItem(f'Compare {self.arr[1][0]} > {self.arr[1][1]}. Stop.'))
+        else:
+            self.fount = False
+            self.next_state = 'calMid'
+            self.list.addItem(QListWidgetItem(f'Compare {self.arr[1][0]} and {self.arr[1][1]}.'))
+    
+    def compareMid(self):
+        now = self.arr[0][self.arr[1][-1] + 3]
+        self.cur[0] = self.arr[1][-1] + 3
+        self.cur[1] = len(self.arr[1]) - 1
+        if now < self.arr[0][2]:
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]}')
+            self.next_state = 'updateLow'
+            self.list.addItem(QListWidgetItem(f'Compare {now} < {self.arr[0][2]}. Go to update low bit.'))
+        elif now > self.arr[0][2]:
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]}')
+            self.next_state = 'updateHigh'
+            self.list.addItem(QListWidgetItem(f'Compare {now} > {self.arr[0][2]}. Go to update high bit.'))
+        else:
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]}')
+            self.found = True
+            self.next_state = 'stop'
+            self.list.addItem(QListWidgetItem(f'Compare {now} = {self.arr[0][2]}. Stop.'))
+    
+    def compareHigh(self):
+        self.showInfo('比较高位\nComparing high bit')
+        self.cur[1] = 1
+        if self.arr[1][0] > self.arr[1][1]:
+            self.next_state = 'stop'
+            self.list.addItem(QListWidgetItem(f'Compare {self.arr[1][0]} > {self.arr[1][1]}. Stop.'))
+        else:
+            self.found = False
+            self.next_state = 'calMid'
+            self.list.addItem(QListWidgetItem(f'Compare {self.arr[1][0]} and {self.arr[1][1]}.'))
+    
+    def calMid(self):
+        self.showInfo('计算中位\nCalculating mid bit')
+        if len(self.arr[1]) < 3:
+            self.arr[1].append((self.arr[1][0] + self.arr[1][1]) // 2)
+        else:
+            self.arr[1][2] = (self.arr[1][0] + self.arr[1][1]) // 2
+        self.cur[1] = 2
+        self.next_state = 'readK'
+        self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][-1]}.'))
+    
+    def readK(self):
+        self.showInfo('读取目标值\nReading target value')
+        self.cur[0] = 2
+        self.next_state = 'readMid'
+        self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
+    
+    def readMid(self):
+        self.showInfo('读取中位\nReading mid bit')
+        self.cur[0] = self.arr[1][-1] + 3
+        self.next_state = 'compareMid'
+        self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][-1] + 3} and get {self.arr[0][self.arr[1][-1] + 3]}.'))
+    
+    def updateLow(self):
+        self.showInfo('更新低位\nUpdating low bit')
+        self.cur[1] = 0
+        old = self.arr[1][0]
+        self.arr[1][0] = self.arr[1][-1] + 1
+        self.next_state = 'compareHigh'
+        self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][0]}.'))
+    
+    def updateHigh(self):
+        self.showInfo('更新高位\nUpdating high bit')
+        self.cur[1] = 1
+        old = self.arr[1][1]
+        self.arr[1][1] = self.arr[1][-1] - 1
+        self.next_state = 'compareLow'
+        self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][1]}.'))
+    
+    def stop(self):
+        self.showInfo('停止\nStopping')
+        if self.found:
+            self.arr[2].append(self.arr[0][2])
+            self.list.addItem(QListWidgetItem(f'Found {self.arr[0][2]} at Index {self.arr[1][-1] + 3}.'))
+        else:
+            self.arr[2].append(-1)
+            self.list.addItem(QListWidgetItem(f'Not found {self.arr[0][2]}.'))
+        self.cur[2] = 0
+        self.simulating = False
