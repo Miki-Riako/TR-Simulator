@@ -200,8 +200,8 @@ class TuringMachine(Interface):
     
     def compareMid(self):
         now = self.arr[0][self.arr[1][-1] + 3]
-        self.cur[0] = self.arr[1][-1] + 3
-        self.cur[1] = len(self.arr[1]) - 1
+        self.cur[0] = self.arr[1][2] + 3
+        self.cur[1] = 2
         if now < self.arr[0][2]:
             self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]}')
             self.next_state = 'updateLow'
@@ -235,7 +235,7 @@ class TuringMachine(Interface):
             self.arr[1][2] = (self.arr[1][0] + self.arr[1][1]) // 2
         self.cur[1] = 2
         self.next_state = 'readK'
-        self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][-1]}.'))
+        self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][2]}.'))
     
     def readK(self):
         self.showInfo('读取目标值\nReading target value')
