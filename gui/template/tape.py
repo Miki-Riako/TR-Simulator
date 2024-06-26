@@ -12,9 +12,10 @@ URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/turing_machine.p
 
 
 class InitialTape(TableWidget):
-    def __init__(self, parent=None):
+    def __init__(self, arr, parent=None):
         super().__init__(parent)
 
+        self.arr = arr
         self.verticalHeader().hide()
         self.setBorderRadius(8)
         self.setBorderVisible(True)
@@ -22,7 +23,7 @@ class InitialTape(TableWidget):
         self.initial()
 
     def initial(self):
-        self.infos = ['10', '5', '0', '1', '2', '3', '4', '6', '7', '8', '9', '10']
+        self.infos = self.arr
         self.reset()
 
     def reset(self):

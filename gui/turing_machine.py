@@ -25,7 +25,7 @@ class TuringMachine(Interface):
         )
         self.setObjectName(text.replace(' ', '-'))
         self.simulating = False
-        self.initial = InitialTape(self)
+        self.initial = InitialTape(['10', '5', '0', '1', '2', '3', '4', '6', '7', '8', '9', '10'], self)
         self.tape = Tape(self)
         self.list = ListWidget(self)
         self.cur = [-1, -1, -1]
