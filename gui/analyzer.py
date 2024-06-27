@@ -18,8 +18,8 @@ class Analyzer(Interface):
             'Performance Analysis',
             'Knapsack Question',
             ['Run', 'Github'],
-            ['Forward', 'Reset', 'Next'],
-            [FIF.PLAY, FIF.GITHUB, FIF.LEFT_ARROW, FIF.SYNC, FIF.RIGHT_ARROW],
+            ['动态规划\nDynamic programming', '分支界限\nBranches', '备忘录\nMemorandum', '回溯\nLook back upon','Forward', 'Reset', 'Next'],
+            [FIF.PLAY, FIF.GITHUB, FIF.MOVE, FIF.TILES, FIF.DICTIONARY, FIF.HISTORY, FIF.LEFT_ARROW, FIF.SYNC, FIF.RIGHT_ARROW],
             self.addFunctions,
             parent=parent
         )
@@ -31,36 +31,61 @@ class Analyzer(Interface):
         self.bottom = QWidget()
         self.bottom.setLayout(self.bottomLayout)
         self.list = ListWidget(self)
-        self.stack = TableWidget(self)
-        self.stack.setBorderVisible(True)
-        self.stack.setBorderRadius(8)
-        self.stack.setWordWrap(False)
-        self.stack.setColumnCount(3)
-        self.stack.setHorizontalHeaderLabels(['Low', 'High', 'Mid'])
+        self.table = TableWidget(self)
+        self.table.setBorderVisible(True)
+        self.table.setBorderRadius(8)
+        self.table.setWordWrap(False)
+        self.table.setColumnCount(4)
+        self.table.setRowCount(4)
         self.bottomLayout.addWidget(self.list, 8)
-        self.bottomLayout.addWidget(self.stack, 2)
+        self.bottomLayout.addWidget(self.table, 2)
         self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
-        self.next_state = 'function'
+        self.step = 0
+        self.next_state = 'readCapacity'
+        self.mode = 0
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
         self.addExampleCard('Tapes', self.tape, [], [], 1)
         self.addExampleCard('History', self.bottom, [], [], 1)
+    
+    def setMode(self, mode):
+        self.mode = mode
+        InfoBar.success(
+            title='已切换模式\nMode Changed',
+            content=f'已切换到{["动态规划", "分支界限", "备忘录", "回溯"][mode]}模式\nSwitched to {["Dynamic programming", "Branches", "Memorandum", "Look back upon"][mode]} mode',
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=2000,
+            parent=self
+        )
+    
+    def index(self, x, y):
+        return x + y * self.cur[0][1]
 
     def simulate(self):
         try:
             self.arr = [[], [], []]
             self.initial.getInfos()
-            self.arr[0].append(0)
-            self.arr[0] += [int(i) for i in self.initial.infos]
-            self.arr[0][1] -= 1
-
+            self.arr[0].append(self.initial.c)
+            self.arr[0].append(self.initial.n)
+            for i in range(self.arr[0][1]):
+                self.arr[0].append(int(self.initial.infos_w[i]))
+                self.arr[0].append(int(self.initial.infos_v[i]))
+                # self.arr[1].append(None for _ in range(self.arr[0][1]))
+                self.arr[1].append(None)
+            self.arr[1] = [''] * self.arr[0][1] * self.arr[0][1]
+            self.arr[2] = [0] * self.arr[0][1]
             self.tape.clear()
-            self.stack.clear()
+            self.table.clear()
+            self.table.setColumnCount(self.arr[0][1])
+            self.table.setRowCount(self.arr[0][1])
             self.list.clear()
             self.tape.set(self.arr)
             self.cur = [-1, -1, -1]
-            self.next_state = 'readLow'
+            self.step = 0
+            self.next_state = 'readCapacity'
             self.simulating = True
             InfoBar.success(
                 title='开始仿真！\nStart!',
@@ -90,6 +115,10 @@ class Analyzer(Interface):
         function_list = []
         function_list.append(self.run)
         function_list.append(lambda: QDesktopServices.openUrl(QUrl(URL)))
+        function_list.append(lambda: self.setMode(0))
+        function_list.append(lambda: self.setMode(1))
+        function_list.append(lambda: self.setMode(2))
+        function_list.append(lambda: self.setMode(3))
         function_list.append(self.forward)
         function_list.append(self.reset)
         function_list.append(self.next)
@@ -97,11 +126,11 @@ class Analyzer(Interface):
 
     def run(self):
         content = '''
-            这里是图灵机仿真递归二分搜索算法！
-            给我一个排列好的n元素数组与你的目标值k，我将演示并且给出k的索引，找不到的话给出-1。
+            这里是0/1背包问题性能分析！
+            给我n元素重量和价值与你的容量c，我将演示并且给出最优解。
             明白了后，你可以修改初始的纸带，然后就让我们点击开始吧！\n
-            Hi there is a Turing machine simulator for binary search question! 
-            Give me an array of aligned n elements with your target value k. I will demonstrate and give you the index of k, and -1 if you can't find it. 
+            Hi there is a Performance Analysis of the 0/1 Knapsack question! 
+            Give me the weight and value of n elements with your capacity c and I will demonstrate and give the optimal solution.
             Once you understand that, you can modify the initial paper tape and then let's click start!
         '''
         w = InfoBar(
@@ -148,9 +177,10 @@ class Analyzer(Interface):
         btn = PushButton('是的    Yes, let\'s go!')
         def r():
             self.simulating = False
+            self.step = 0
             self.tape.clear()
             self.list.clear()
-            self.stack.clear()
+            self.table.clear()
             InfoBar.success(
                 title='重置了！\nReset!',
                 content="已重置图灵机。\nThe Turing machine has been reset.",
@@ -243,10 +273,10 @@ class Analyzer(Interface):
                 return
             self.tape.set(self.arr)
             self.tape.current(self.cur)
-            self.stack.setRowCount(self.stack.rowCount() + 1)
-            self.stack.setItem(self.stack.rowCount()-1, 0, QTableWidgetItem(str(self.arr[0][0])))
-            self.stack.setItem(self.stack.rowCount()-1, 1, QTableWidgetItem(str(self.arr[0][1])))
-            self.stack.setItem(self.stack.rowCount()-1, 2, QTableWidgetItem(str(self.arr[1][0])))
+            # self.table.setRowCount(self.table.rowCount() + 1)
+            # self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.arr[0][0])))
+            # self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(self.arr[0][1])))
+            # self.table.setItem(self.table.rowCount()-1, 2, QTableWidgetItem(str(self.arr[1][0])))
             self.arr[0][0] = low
             self.arr[0][1] = high
             self.arr[1].pop

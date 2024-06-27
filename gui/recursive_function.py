@@ -42,7 +42,7 @@ class RecursiveFunction(Interface):
         self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
         self.step = 0
-        self.next_state = 'function'
+        self.next_state = 'readLow'
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
         self.addExampleCard('Tapes', self.tape, [], [], 1)
