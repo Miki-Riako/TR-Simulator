@@ -39,6 +39,7 @@ class RecursiveFunction(Interface):
         self.stack.setHorizontalHeaderLabels(['Low', 'High', 'Mid'])
         self.bottomLayout.addWidget(self.list, 8)
         self.bottomLayout.addWidget(self.stack, 2)
+        self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
         self.next_state = 'function'
 
