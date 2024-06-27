@@ -9,7 +9,8 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-
+DEBUG_MODE = True
+NEXT = 450
 
 
 class Analyzer(Interface):
@@ -44,6 +45,10 @@ class Analyzer(Interface):
         self.step = 0
         self.next_state = 'readCapacity'
         self.mode = 0
+        if DEBUG_MODE:
+            self.simulate()
+            for _ in range(NEXT):
+                self.next()
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
         self.addExampleCard('Tapes', self.tape, [], [], 1)
@@ -62,7 +67,7 @@ class Analyzer(Interface):
         )
     
     def index(self, x, y):
-        return x + y * self.cur[0][1]
+        return x * (self.arr[0][0]+1) + y
 
     def simulate(self):
         try:
@@ -73,20 +78,25 @@ class Analyzer(Interface):
             for i in range(self.arr[0][1]):
                 self.arr[0].append(int(self.initial.infos_w[i]))
                 self.arr[0].append(int(self.initial.infos_v[i]))
-                # self.arr[1].append(None for _ in range(self.arr[0][1]))
-                self.arr[1].append(None)
-            self.arr[1] = [''] * self.arr[0][1] * self.arr[0][1]
+            self.arr[1] = []
             self.arr[2] = [0] * self.arr[0][1]
             self.tape.clear()
             self.table.clear()
             self.table.setColumnCount(self.arr[0][1])
-            self.table.setRowCount(self.arr[0][1])
+            self.table.setRowCount(self.arr[0][0]+1)
             self.list.clear()
             self.tape.set(self.arr)
             self.cur = [-1, -1, -1]
             self.step = 0
-            self.next_state = 'readCapacity'
             self.simulating = True
+            
+            if self.mode == 0:
+                self.dp = [[0]*(self.arr[0][0]+1) for _ in range(self.arr[0][1])]
+                self.nowCol = 0
+                self.nowRow = self.arr[0][1] - 1
+                self.calculated = False
+                self.next_state = 'readCapacity'
+
             InfoBar.success(
                 title='开始仿真！\nStart!',
                 content='''
@@ -202,95 +212,166 @@ class Analyzer(Interface):
             self.tape.set(self.arr)
             self.tape.current(self.cur)
             return
+        self.step += 1
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
         self.tape.current(self.cur)
     
-    def readLow(self):
-        self.showInfo('读取低位\nReading low bit')
+    def readCapacity(self):
+        self.showInfo(f'读取容量\nReading capacity\nStep {self.step}')
         self.cur[0] = 0
-        self.next_state = 'compareHigh'
-        self.list.addItem(QListWidgetItem(f'Low index {self.arr[0][0]}.'))
+        self.next_state = 'readNum'
+        self.list.addItem(QListWidgetItem(f'Reading capacity {self.arr[0][0]}.'))
     
-    def compareHigh(self):
-        self.showInfo('比较高位\nComparing high bit')
+    def readNum(self):
+        self.showInfo(f'读取数字\nReading number\nStep {self.step}')
         self.cur[0] = 1
-        self.next_state = 'calMid'
-        self.list.addItem(QListWidgetItem(f'Compare {self.arr[0][0]} and {self.arr[0][1]}.'))
+        self.next_state = 'readWeight'
+        self.list.addItem(QListWidgetItem(f'Reading number {self.arr[0][0]}.'))
     
-    def calMid(self):
-        self.showInfo('计算中位\nCalculating mid bit')
-        if len(self.arr[1]) < 1:
-            self.arr[1].append((self.arr[0][0] + self.arr[0][1]) // 2)
-        else:
-            self.arr[1][0] = (self.arr[0][0] + self.arr[0][1]) // 2
-        self.cur[1] = 0
-        self.next_state = 'readK'
-        self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[0][0]} + {self.arr[0][1]}) // 2 = {self.arr[1][0]}.'))
-    
-    def readK(self):
-        self.showInfo('读取目标值\nReading target value')
-        self.cur[0] = 2
-        self.next_state = 'readMid'
-        self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
-    
-    def readMid(self):
-        self.showInfo('读取中位\nReading mid bit')
-        self.cur[0] += 1
-        if self.cur[0] == self.arr[1][0] + 3:
-            self.next_state = 'compareMid'
-            self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][0]} and get {self.arr[0][self.arr[1][0] + 3]}.'))
-    
-    def compareMid(self):
-        now = self.arr[0][self.arr[1][-1] + 3]
-        self.cur[0] = self.arr[1][0] + 3
-        self.cur[1] = 0
-        if now < self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]}')
-            self.next_state = 'call'
-            self.list.addItem(QListWidgetItem(f'Compare {now} < {self.arr[0][2]}. Call recursive function.'))
-        elif now > self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]}')
-            self.next_state = 'call'
-            self.list.addItem(QListWidgetItem(f'Compare {now} > {self.arr[0][2]}. Call recursive function.'))
-        else:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]}')
-            self.found = True
-            self.next_state = 'end'
-            self.list.addItem(QListWidgetItem(f'Compare {now} = {self.arr[0][2]}. End.'))
-    
-    def call(self):
-        self.showInfo('调用递归函数')
-        if self.cur[0] > 0:
+    def readWeight(self):
+        self.showInfo(f'读取重量\nReading weight\nStep {self.step}')
+        if self.cur[0] < 2*self.nowRow+2:
+            self.cur[0] += 1
+        elif self.cur[0] > 2*self.nowRow+2:
             self.cur[0] -= 1
         else:
-            now = self.arr[0][self.arr[1][0]+2]
-            low = self.arr[0][0] if self.arr[0][2] < now else self.arr[1][0] + 1
-            high = self.arr[0][1] if self.arr[0][2] > now else self.arr[1][0] - 1
-            if low == high:
-                self.found = False
-                self.end()
-                return
-            self.tape.set(self.arr)
-            self.tape.current(self.cur)
-            # self.table.setRowCount(self.table.rowCount() + 1)
-            # self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.arr[0][0])))
-            # self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(self.arr[0][1])))
-            # self.table.setItem(self.table.rowCount()-1, 2, QTableWidgetItem(str(self.arr[1][0])))
-            self.arr[0][0] = low
-            self.arr[0][1] = high
-            self.arr[1].pop
-            self.tape.set(self.arr)
-            self.next_state = 'readLow'
-            self.list.addItem(QListWidgetItem('Call recursive function.'))
-
-    def end(self):
-        self.showInfo('结束\nEnd')
-        if self.found:
-            self.arr[2].append(self.arr[0][2])
-            self.list.addItem(QListWidgetItem(f'Found {self.arr[0][2]} at Index {self.arr[1][0] + 3}.'))
+            self.next_state = 'readValue'
+            self.list.addItem(QListWidgetItem(f'Reading weight {self.arr[0][self.cur[0]]}.'))
+    
+    def readValue(self):
+        self.showInfo(f'读取价值\nReading value\nStep {self.step}')
+        self.cur[0] += 1
+        self.next_state = 'writeM'
+        self.list.addItem(QListWidgetItem(f'Reading value {self.arr[0][self.cur[0]]}.'))
+    
+    def writeM(self):
+        self.showInfo(f'写入DP数组\nWriting DP Matrix\nStep {self.step}')
+        if self.nowRow == self.arr[0][1]-1 or self.cur[1] == self.nowCol:
+            if self.nowCol < self.arr[0][0]+1:
+                nowWeight = self.arr[0][self.cur[0]-1]
+                nowValue = self.arr[0][self.cur[0]]
+                if self.nowRow == self.arr[0][1]-1:
+                    self.dp[self.nowRow][self.nowCol] = nowValue if nowWeight <= self.nowCol else 0
+                    self.next_state = 'writeM'
+                else:
+                    self.next_state = 'readM'
+                self.arr[1].insert(self.nowCol, self.dp[self.nowRow][self.nowCol])
+                self.cur[1] = self.nowCol
+                self.list.addItem(QListWidgetItem(f'Writing DP Matrix {self.dp[self.nowRow][self.nowCol]}.'))
+                self.nowCol += 1
+            if self.nowCol >= self.arr[0][0]+1:
+                self.nowCol = 0
+                if self.nowRow == 0:
+                    self.optimal = [0, self.arr[0][0]]
+                    self.next_state = 'readW'
+                else:
+                    self.nowRow -= 1
+                    self.next_state = 'readWeight'
+        elif self.cur[1] < self.nowCol:
+            self.cur[1] += 1
         else:
-            self.arr[2].append(-1)
-            self.list.addItem(QListWidgetItem(f'Not found {self.arr[0][2]}.'))
-        self.cur[2] = 0
+            self.cur[1] -= 1
+    
+    def readM(self):
+        self.showInfo(f'读取DP数组\nRead DP Matrix\nStep {self.step}')
+        if self.cur[1] < 2*self.nowCol:
+            self.cur[1] += 1
+        elif self.cur[1] > 2*self.nowCol:
+            self.cur[1] -= 1
+        else:
+            nowWeight = self.arr[0][self.cur[0]-1]
+            if self.nowCol >= nowWeight:
+                self.next_state = 'calM'
+            else:
+                self.dp[self.nowRow][self.nowCol] = self.dp[self.nowRow+1][self.nowCol]
+                self.next_state = 'writeM'
+            self.list.addItem(QListWidgetItem(f'Reading DP Matrix {self.dp[self.nowRow][self.nowCol]}.'))
+    
+    def calM(self):
+        self.showInfo(f'计算DP数组\nCalculate DP Matrix\nStep {self.step}')
+        if self.cur[1] < len(self.arr[1])-1:
+            self.cur[1] += 1
+        elif self.cur[1] > len(self.arr[1])-1:
+            self.cur[1] -= 1
+        else:
+            nowWeight = self.arr[0][self.cur[0]-1]
+            nowValue = self.arr[0][self.cur[0]]
+            self.choose = self.dp[self.nowRow+1][self.nowCol-nowWeight] + nowValue
+            if self.calculated:
+                self.arr[1][len(self.arr[1])-1] = self.choose
+            else:
+                self.arr[1].append(self.choose)
+            self.cur[1] += 1
+            self.calculated = True
+            self.next_state = 'cmp'
+            self.list.addItem(QListWidgetItem(f'Calculate DP Matrix {self.choose} if chosen.'))
+    
+    def cmp(self):
+        self.showInfo(f'比较DP数组\nCompare DP Matrix\nStep {self.step}')
+        if self.dp[self.nowRow+1][self.nowCol] > self.choose:
+            self.dp[self.nowRow][self.nowCol] = self.dp[self.nowRow+1][self.nowCol]
+            self.list.addItem(QListWidgetItem(f'Compare DP Matrix {self.dp[self.nowRow+1][self.nowCol]} > {self.choose}.'))
+        else:
+            self.dp[self.nowRow][self.nowCol] = self.choose
+            self.list.addItem(QListWidgetItem(f'Compare DP Matrix {self.dp[self.nowRow+1][self.nowCol]} >= {self.choose}.'))
+        self.next_state = 'writeM'
+    
+    def readW(self):
+        self.showInfo(f'读取物品重量\nRead Weight\nStep {self.step}')
+        if self.cur[0] < 2*self.nowRow+2:
+            self.cur[0] += 1
+        elif self.cur[0] > 2*self.nowRow+2:
+            self.cur[0] -= 1
+        else:
+            self.next_state = 'ansM'
+            self.list.addItem(QListWidgetItem(f'Reading Weight {self.arr[0][self.cur[0]]}.'))
+    
+    def ansM(self):
+        self.showInfo(f'回溯最优解\nBacktracking\nStep {self.step}')
+        if self.cur[1] < self.index(self.optimal[0], self.optimal[1]):
+            self.cur[1] += 1
+        elif self.cur[1] > self.index(self.optimal[0], self.optimal[1]):
+            self.cur[1] -= 1
+        else:
+            self.next_state = 'cmpAnsM'
+            self.list.addItem(QListWidgetItem(f'Backtracking {self.arr[1][self.cur[1]]}.'))
+    
+    def cmpAnsM(self):
+        self.showInfo(f'比较最优解\nCompare Answer\nStep {self.step}')
+        if self.cur[1] < self.index(self.optimal[0]+1, self.optimal[1]):
+            self.cur[1] += 1
+        elif self.cur[1] > self.index(self.optimal[0]+1, self.optimal[1]):
+            self.cur[1] -= 1
+        else:
+            if self.optimal[0] == self.arr[0][1]-1:
+                if self.dp[self.optimal[0]][self.optimal[1]] != 0:
+                    self.next_state = 'writeAns'
+                else:
+                    self.cur[2] += 1
+                    self.next_state = 'success'
+            elif self.dp[self.optimal[0]][self.optimal[1]] != self.dp[self.optimal[0]+1][self.optimal[1]]:
+                self.optimal[0] += 1
+                self.optimal[1] -= self.arr[0][self.cur[0]]
+                self.next_state = 'writeAns'
+            else:
+                self.optimal[0] += 1
+                self.nowRow += 1
+                self.cur[2] += 1
+                self.next_state = 'readW'
+    
+    def writeAns(self):
+        self.showInfo(f'写入最优解\nWrite Answer\nStep {self.step}')
+        self.arr[2][self.nowRow] = 1
+        self.cur[2] = self.nowRow
+        if self.nowRow == self.arr[0][1]-1:
+            self.next_state = 'success'
+        else:
+            self.nowRow += 1
+            self.next_state = 'readW'
+        self.list.addItem(QListWidgetItem(f'Write Answer {self.arr[2][self.nowRow-1]}.'))
+    
+    def success(self):
+        self.showInfo(f'成功\nSuccess')
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}.'))
         self.simulating = False
