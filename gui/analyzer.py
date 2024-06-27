@@ -9,7 +9,7 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-DEBUG_MODE = True
+DEBUG_MODE = False
 NEXT = 450
 
 
@@ -36,10 +36,10 @@ class Analyzer(Interface):
         self.table.setBorderVisible(True)
         self.table.setBorderRadius(8)
         self.table.setWordWrap(False)
-        self.table.setColumnCount(4)
+        self.table.setColumnCount(6)
         self.table.setRowCount(4)
-        self.bottomLayout.addWidget(self.list, 8)
-        self.bottomLayout.addWidget(self.table, 2)
+        self.bottomLayout.addWidget(self.list, 7)
+        self.bottomLayout.addWidget(self.table, 3)
         self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
         self.step = 0
@@ -69,6 +69,21 @@ class Analyzer(Interface):
     def index(self, x, y):
         return x * (self.arr[0][0]+1) + y
 
+    def pushStack(self):
+        self.table.setRowCount(self.table.rowCount()+1)
+        self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.depth)))
+        self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(self.value)))
+
+    def getNum(self, index, local):
+        if self.cur[index] < local:
+            self.cur[index] += 1
+            return False
+        elif self.cur[index] > local:
+            self.cur[index] -= 1
+            return False
+        else:
+            return True
+
     def simulate(self):
         try:
             self.arr = [[], [], []]
@@ -82,8 +97,6 @@ class Analyzer(Interface):
             self.arr[2] = [0] * self.arr[0][1]
             self.tape.clear()
             self.table.clear()
-            self.table.setColumnCount(self.arr[0][1])
-            self.table.setRowCount(self.arr[0][0]+1)
             self.list.clear()
             self.tape.set(self.arr)
             self.cur = [-1, -1, -1]
@@ -95,7 +108,20 @@ class Analyzer(Interface):
                 self.nowCol = 0
                 self.nowRow = self.arr[0][1] - 1
                 self.calculated = False
+                self.table.setColumnCount(self.arr[0][0]+1)
+                self.table.setRowCount(self.arr[0][1])
+                for i in range(self.arr[0][1]):
+                    for j in range(self.arr[0][0]+1):
+                        self.table.setItem(i, j, QTableWidgetItem('0'))
                 self.next_state = 'readCapacity'
+            else:
+                self.bestV = 0
+                self.curW = 0
+                self.curV = 0
+                self.table.setColumnCount(2)
+                self.table.setRowCount(0)
+                self.table.setHorizontalHeaderLabels(['Depth', 'Value'])
+                self.next_state = 'backtrackBegin'
 
             InfoBar.success(
                 title='开始仿真！\nStart!',
@@ -253,6 +279,7 @@ class Analyzer(Interface):
                 nowValue = self.arr[0][self.cur[0]]
                 if self.nowRow == self.arr[0][1]-1:
                     self.dp[self.nowRow][self.nowCol] = nowValue if nowWeight <= self.nowCol else 0
+                    self.table.setItem(self.nowRow, self.nowCol, QTableWidgetItem(str(self.dp[self.nowRow][self.nowCol])))
                     self.next_state = 'writeM'
                 else:
                     self.next_state = 'readM'
@@ -285,6 +312,7 @@ class Analyzer(Interface):
                 self.next_state = 'calM'
             else:
                 self.dp[self.nowRow][self.nowCol] = self.dp[self.nowRow+1][self.nowCol]
+                self.table.setItem(self.nowRow, self.nowCol, QTableWidgetItem(str(self.dp[self.nowRow][self.nowCol])))
                 self.next_state = 'writeM'
             self.list.addItem(QListWidgetItem(f'Reading DP Matrix {self.dp[self.nowRow][self.nowCol]}.'))
     
@@ -311,9 +339,11 @@ class Analyzer(Interface):
         self.showInfo(f'比较DP数组\nCompare DP Matrix\nStep {self.step}')
         if self.dp[self.nowRow+1][self.nowCol] > self.choose:
             self.dp[self.nowRow][self.nowCol] = self.dp[self.nowRow+1][self.nowCol]
+            self.table.setItem(self.nowRow, self.nowCol, QTableWidgetItem(str(self.dp[self.nowRow][self.nowCol])))
             self.list.addItem(QListWidgetItem(f'Compare DP Matrix {self.dp[self.nowRow+1][self.nowCol]} > {self.choose}.'))
         else:
             self.dp[self.nowRow][self.nowCol] = self.choose
+            self.table.setItem(self.nowRow, self.nowCol, QTableWidgetItem(str(self.dp[self.nowRow][self.nowCol])))
             self.list.addItem(QListWidgetItem(f'Compare DP Matrix {self.dp[self.nowRow+1][self.nowCol]} >= {self.choose}.'))
         self.next_state = 'writeM'
     
@@ -375,3 +405,40 @@ class Analyzer(Interface):
         self.showInfo(f'成功\nSuccess')
         self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}.'))
         self.simulating = False
+
+
+
+
+
+
+
+    def backtrackBegin(self):
+        self.showInfo(f'回溯开始\nBacktracking Begin\nStep {self.step}')
+        self.arr[1].append(self.bestV)
+        self.arr[1].append(self.curW)
+        self.arr[1].append(self.curV)
+        self.value = 0
+        self.depth = 0
+        self.pushStack()
+        self.cur = [0, 0, 0]
+        self.stack = []
+        self.next_state = 'backtrack'
+        self.list.addItem(QListWidgetItem(f'Call f({self.value}).'))
+    
+    def backtrack(self):
+        self.showInfo(f'回溯\nBacktracking\nStep {self.step}')
+        if self.getNum(0, 2):
+            if self.value >= self.arr[0][1]:
+                self.next_state = 'back'
+                self.list.addItem(QListWidgetItem(f'Compare Value {self.arr[0][1]} and go back.'))
+            else:
+                self.next_state = 'traverse'
+                self.list.addItem(QListWidgetItem(f'Compare Weight {self.arr[0][1]} and go next.'))
+    
+    def back(self):
+        self.showInfo(f'回溯至最初\nBacktracking\nStep {self.step}')
+        ...
+    
+    def traverse(self):
+        self.showInfo(f'继续\nTraversing next\nStep {self.step}')
+        ...
