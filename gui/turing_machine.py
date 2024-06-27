@@ -30,6 +30,7 @@ class TuringMachine(Interface):
         self.list = ListWidget(self)
         self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
+        self.step = 0
         self.next_state = 'initLow'
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
@@ -138,6 +139,7 @@ class TuringMachine(Interface):
             self.simulating = False
             self.tape.clear()
             self.list.clear()
+            self.step = 0
             InfoBar.success(
                 title='重置了！\nReset!',
                 content="已重置图灵机。\nThe Turing machine has been reset.",
@@ -159,38 +161,39 @@ class TuringMachine(Interface):
             self.tape.set(self.arr)
             self.tape.current(self.cur)
             return
+        self.step += 1
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
         self.tape.current(self.cur)
 
     def initLow(self):
-        self.showInfo('初始化低位\nInitializing low bit')
+        self.showInfo(f'初始化低位\nInitializing low bit\nStep {self.step}')
         self.cur[0] = 0
         self.next_state = 'writeLow'
         self.list.addItem(QListWidgetItem(f'Get {self.arr[0][0]}.'))
     
     def initHigh(self):
-        self.showInfo('初始化高位\nInitializing high bit')
+        self.showInfo(f'初始化高位\nInitializing high bit\nStep {self.step}')
         self.cur[0] = 1
         self.next_state = 'writeHigh'
         self.list.addItem(QListWidgetItem(f'Get {self.arr[0][1]}.'))
     
     def writeLow(self):
-        self.showInfo('写入低位\nWriting low bit')
+        self.showInfo(f'写入低位\nWriting low bit\nStep {self.step}')
         self.arr[1].append(self.arr[0][0])
         self.cur[1] = 0
         self.next_state = 'initHigh'
         self.list.addItem(QListWidgetItem(f'Write {self.arr[0][0]} as low bit.'))
     
     def writeHigh(self):
-        self.showInfo('写入高位\nWriting high bit')
+        self.showInfo(f'写入高位\nWriting high bit\nStep {self.step}')
         self.arr[1].append(self.arr[0][1])
         self.cur[1] = 1
         self.next_state = 'compareLow'
         self.list.addItem(QListWidgetItem(f'Write {self.arr[0][1]} as high bit.'))
     
     def compareLow(self):
-        self.showInfo('比较低位\nComparing low bit')
+        self.showInfo(f'比较低位\nComparing low bit\nStep {self.step}')
         self.cur[1] = 0
         if self.arr[1][0] > self.arr[1][1]:
             self.next_state = 'stop'
@@ -205,21 +208,21 @@ class TuringMachine(Interface):
         self.cur[0] = self.arr[1][2] + 3
         self.cur[1] = 2
         if now < self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]} Step {self.step}')
             self.next_state = 'updateLow'
             self.list.addItem(QListWidgetItem(f'Compare {now} < {self.arr[0][2]}. Go to update low bit.'))
         elif now > self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]} Step {self.step}')
             self.next_state = 'updateHigh'
             self.list.addItem(QListWidgetItem(f'Compare {now} > {self.arr[0][2]}. Go to update high bit.'))
         else:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]} Step {self.step}')
             self.found = True
             self.next_state = 'stop'
             self.list.addItem(QListWidgetItem(f'Compare {now} = {self.arr[0][2]}. Stop.'))
     
     def compareHigh(self):
-        self.showInfo('比较高位\nComparing high bit')
+        self.showInfo(f'比较高位\nComparing high bit\nStep {self.step}')
         self.cur[1] = 1
         if self.arr[1][0] > self.arr[1][1]:
             self.next_state = 'stop'
@@ -230,7 +233,7 @@ class TuringMachine(Interface):
             self.list.addItem(QListWidgetItem(f'Compare {self.arr[1][0]} and {self.arr[1][1]}.'))
     
     def calMid(self):
-        self.showInfo('计算中位\nCalculating mid bit')
+        self.showInfo(f'计算中位\nCalculating mid bit\nStep {self.step}')
         if len(self.arr[1]) < 3:
             self.arr[1].append((self.arr[1][0] + self.arr[1][1]) // 2)
         else:
@@ -241,7 +244,7 @@ class TuringMachine(Interface):
             self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[1][0]} + {self.arr[1][1]}) // 2 = {self.arr[1][2]}.'))
     
     def readK(self):
-        self.showInfo('读取目标值\nReading target value')
+        self.showInfo(f'读取目标值\nReading target value\nStep {self.step}')
         if self.cur[0] == 2:
             self.next_state = 'readMid'
             self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
@@ -251,14 +254,14 @@ class TuringMachine(Interface):
             self.cur[0] -= 1
     
     def readMid(self):
-        self.showInfo('读取中位\nReading mid bit')
+        self.showInfo(f'读取中位\nReading mid bit\nStep {self.step}')
         self.cur[0] += 1
         if self.cur[0] == self.arr[1][2] + 3:
             self.next_state = 'compareMid'
             self.list.addItem(QListWidgetItem(f'Read Index {self.arr[1][2]} and get {self.arr[0][self.arr[1][2] + 3]}.'))
     
     def updateLow(self):
-        self.showInfo('更新低位\nUpdating low bit')
+        self.showInfo(f'更新低位\nUpdating low bit\nStep {self.step}')
         self.cur[1] -= 1
         if  self.cur[1] == 0:
             old = self.arr[1][0]
@@ -267,7 +270,7 @@ class TuringMachine(Interface):
             self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][0]}.'))
     
     def updateHigh(self):
-        self.showInfo('更新高位\nUpdating high bit')
+        self.showInfo(f'更新高位\nUpdating high bit\nStep {self.step}')
         self.cur[1] = 1
         old = self.arr[1][1]
         self.arr[1][1] = self.arr[1][-1] - 1
@@ -275,7 +278,7 @@ class TuringMachine(Interface):
         self.list.addItem(QListWidgetItem(f'Update Index {old} to {self.arr[1][1]}.'))
     
     def stop(self):
-        self.showInfo('停止\nStopping')
+        self.showInfo(f'停止\nStopping\nStep {self.step}')
         if self.found:
             self.arr[2].append(self.arr[0][2])
             self.list.addItem(QListWidgetItem(f'Found {self.arr[0][2]} at Index {self.arr[1][-1] + 3}.'))

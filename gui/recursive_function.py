@@ -41,6 +41,7 @@ class RecursiveFunction(Interface):
         self.bottomLayout.addWidget(self.stack, 2)
         self.arr = [[], [], []]
         self.cur = [-1, -1, -1]
+        self.step = 0
         self.next_state = 'function'
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
@@ -151,6 +152,7 @@ class RecursiveFunction(Interface):
             self.tape.clear()
             self.list.clear()
             self.stack.clear()
+            self.step = 0
             InfoBar.success(
                 title='重置了！\nReset!',
                 content="已重置图灵机。\nThe Turing machine has been reset.",
@@ -172,24 +174,25 @@ class RecursiveFunction(Interface):
             self.tape.set(self.arr)
             self.tape.current(self.cur)
             return
+        self.step += 1
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
         self.tape.current(self.cur)
     
     def readLow(self):
-        self.showInfo('读取低位\nReading low bit')
+        self.showInfo(f'读取低位\nReading low bit\nStep {self.step}')
         self.cur[0] = 0
         self.next_state = 'compareHigh'
         self.list.addItem(QListWidgetItem(f'Low index {self.arr[0][0]}.'))
     
     def compareHigh(self):
-        self.showInfo('比较高位\nComparing high bit')
+        self.showInfo(f'比较高位\nComparing high bit\nStep {self.step}')
         self.cur[0] = 1
         self.next_state = 'calMid'
         self.list.addItem(QListWidgetItem(f'Compare {self.arr[0][0]} and {self.arr[0][1]}.'))
     
     def calMid(self):
-        self.showInfo('计算中位\nCalculating mid bit')
+        self.showInfo(f'计算中位\nCalculating mid bit\nStep {self.step}')
         if len(self.arr[1]) < 1:
             self.arr[1].append((self.arr[0][0] + self.arr[0][1]) // 2)
         else:
@@ -199,13 +202,13 @@ class RecursiveFunction(Interface):
         self.list.addItem(QListWidgetItem(f'Calculate the index ({self.arr[0][0]} + {self.arr[0][1]}) // 2 = {self.arr[1][0]}.'))
     
     def readK(self):
-        self.showInfo('读取目标值\nReading target value')
+        self.showInfo(f'读取目标值\nReading target value\nStep {self.step}')
         self.cur[0] = 2
         self.next_state = 'readMid'
         self.list.addItem(QListWidgetItem(f'Search {self.arr[0][2]}.'))
     
     def readMid(self):
-        self.showInfo('读取中位\nReading mid bit')
+        self.showInfo(f'读取中位\nReading mid bit\nStep {self.step}')
         self.cur[0] += 1
         if self.cur[0] == self.arr[1][0] + 3:
             self.next_state = 'compareMid'
@@ -216,21 +219,21 @@ class RecursiveFunction(Interface):
         self.cur[0] = self.arr[1][0] + 3
         self.cur[1] = 0
         if now < self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} < {self.arr[0][2]} Step {self.step}')
             self.next_state = 'call'
             self.list.addItem(QListWidgetItem(f'Compare {now} < {self.arr[0][2]}. Call recursive function.'))
         elif now > self.arr[0][2]:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} > {self.arr[0][2]} Step {self.step}')
             self.next_state = 'call'
             self.list.addItem(QListWidgetItem(f'Compare {now} > {self.arr[0][2]}. Call recursive function.'))
         else:
-            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]}')
+            self.showInfo(f'比较中位\nComparing mid bit\n{now} = {self.arr[0][2]} Step {self.step}')
             self.found = True
             self.next_state = 'end'
             self.list.addItem(QListWidgetItem(f'Compare {now} = {self.arr[0][2]}. End.'))
     
     def call(self):
-        self.showInfo('调用递归函数')
+        self.showInfo(f'调用递归函数\nCall recursive function\nStep {self.step}')
         if self.cur[0] > 0:
             self.cur[0] -= 1
         else:
@@ -255,7 +258,7 @@ class RecursiveFunction(Interface):
             self.list.addItem(QListWidgetItem('Call recursive function.'))
 
     def end(self):
-        self.showInfo('结束\nEnd')
+        self.showInfo(f'结束\nEnd\n Step {self.step}')
         if self.found:
             self.arr[2].append(self.arr[0][2])
             self.list.addItem(QListWidgetItem(f'Found {self.arr[0][2]} at Index {self.arr[1][0] + 3}.'))
