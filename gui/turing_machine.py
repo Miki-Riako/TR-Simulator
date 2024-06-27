@@ -44,6 +44,7 @@ class TuringMachine(Interface):
             self.arr[0][1] -= 1
 
             self.tape.clear()
+            self.list.clear()
             self.tape.set(self.arr)
             self.cur = [-1, -1, -1]
             self.next_state = 'initLow'

@@ -32,11 +32,15 @@ class RecursiveFunction(Interface):
         self.bottom.setLayout(self.bottomLayout)
         self.list = ListWidget(self)
         self.stack = TableWidget(self)
+        self.stack.setBorderVisible(True)
+        self.stack.setBorderRadius(8)
+        self.stack.setWordWrap(False)
+        self.stack.setColumnCount(3)
         self.stack.setHorizontalHeaderLabels(['Low', 'High', 'Mid'])
-        self.bottomLayout.addWidget(self.list, 7)
-        self.bottomLayout.addWidget(self.stack, 3)
+        self.bottomLayout.addWidget(self.list, 8)
+        self.bottomLayout.addWidget(self.stack, 2)
         self.cur = [-1, -1, -1]
-        self.next_state = 'readLow'
+        self.next_state = 'function'
 
         self.addExampleCard('Initial Tape', self.initial, [FIF.ADD, FIF.REMOVE, FIF.ROTATE], [self.initial.addItem, self.initial.removeItem, self.initial.initial], 1)
         self.addExampleCard('Tapes', self.tape, [], [], 1)
@@ -51,6 +55,8 @@ class RecursiveFunction(Interface):
             self.arr[0][1] -= 1
 
             self.tape.clear()
+            self.stack.clear()
+            self.list.clear()
             self.tape.set(self.arr)
             self.cur = [-1, -1, -1]
             self.next_state = 'readLow'
@@ -143,6 +149,7 @@ class RecursiveFunction(Interface):
             self.simulating = False
             self.tape.clear()
             self.list.clear()
+            self.stack.clear()
             InfoBar.success(
                 title='重置了！\nReset!',
                 content="已重置图灵机。\nThe Turing machine has been reset.",
@@ -167,7 +174,6 @@ class RecursiveFunction(Interface):
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
         self.tape.current(self.cur)
-        self.stack.show()
     
     def readLow(self):
         self.showInfo('读取低位\nReading low bit')
@@ -223,7 +229,37 @@ class RecursiveFunction(Interface):
             self.list.addItem(QListWidgetItem(f'Compare {now} = {self.arr[0][2]}. End.'))
     
     def call(self):
-        ...
+        self.showInfo('调用递归函数')
+        if self.cur[0] > 0:
+            self.cur[0] -= 1
+        else:
+            now = self.arr[0][self.arr[1][0]+2]
+            low = self.arr[0][0] if self.arr[0][2] < now else self.arr[1][0] + 1
+            high = self.arr[0][1] if self.arr[0][2] > now else self.arr[1][0] - 1
+            if low == high:
+                self.found = False
+                self.end()
+                return
+            self.tape.set(self.arr)
+            self.tape.current(self.cur)
+            self.stack.setRowCount(self.stack.rowCount() + 1)
+            self.stack.setItem(self.stack.rowCount()-1, 0, QTableWidgetItem(str(self.arr[0][0])))
+            self.stack.setItem(self.stack.rowCount()-1, 1, QTableWidgetItem(str(self.arr[0][1])))
+            self.stack.setItem(self.stack.rowCount()-1, 2, QTableWidgetItem(str(self.arr[1][0])))
+            self.arr[0][0] = low
+            self.arr[0][1] = high
+            self.arr[1].pop
+            self.tape.set(self.arr)
+            self.next_state = 'readLow'
+            self.list.addItem(QListWidgetItem('Call recursive function.'))
 
     def end(self):
-        ...
+        self.showInfo('结束\nEnd')
+        if self.found:
+            self.arr[2].append(self.arr[0][2])
+            self.list.addItem(QListWidgetItem(f'Found {self.arr[0][2]} at Index {self.arr[1][0] + 3}.'))
+        else:
+            self.arr[2].append(-1)
+            self.list.addItem(QListWidgetItem(f'Not found {self.arr[0][2]}.'))
+        self.cur[2] = 0
+        self.simulating = False
