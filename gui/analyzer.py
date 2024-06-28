@@ -71,7 +71,7 @@ class Analyzer(Interface):
 
     def pushStack(self):
         self.table.setRowCount(self.table.rowCount()+1)
-        self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.depth)))
+        self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.deep)))
         self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(self.value)))
 
     def getNum(self, index, local):
@@ -114,10 +114,25 @@ class Analyzer(Interface):
                     for j in range(self.arr[0][0]+1):
                         self.table.setItem(i, j, QTableWidgetItem('0'))
                 self.next_state = 'readCapacity'
+            elif self.mode == 1:
+                self.q = []
+                self.mySet = []
+                self.items = []
+                self.maxValue = 0
+                self.next_state = 'readAll'
             else:
                 self.bestV = 0
                 self.curW = 0
                 self.curV = 0
+                self.arr[1].append(self.bestV)
+                self.arr[1].append(self.curW)
+                self.arr[1].append(self.curV)
+                self.stackValue = []
+                self.stackState = []
+                self.stackValue.append(0)
+                self.stackState.append('backtrackSuccess')
+                self.deep = -1
+                self.value = -1
                 self.table.setColumnCount(2)
                 self.table.setRowCount(0)
                 self.table.setHorizontalHeaderLabels(['Depth', 'Value'])
@@ -406,6 +421,47 @@ class Analyzer(Interface):
         self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}.'))
         self.simulating = False
 
+    def bound(self, i, current_node, items, w):
+        re_weight = w - current_node['weight']
+        bound = current_node['value']
+        while (i < len(items)):
+            if (items[i][1] <= re_weight):
+                bound += items[i][0]
+                re_weight -= items[i][1]
+            else:
+                bound += items[i][0] / items[i][1] * re_weight
+                break
+            i += 1
+        return bound
+
+
+
+    def readAll(self):
+        self.showInfo(f'读取所有\nRead All\nStep {self.step}')
+        if self.getNum(0, len(self.arr[0])-1):
+            self.next_state = 'transfer'
+            self.list.addItem(QListWidgetItem(f'Read All.'))
+
+    def transfer(self):
+        self.showInfo(f'转移\nTransfer\nStep {self.step}')
+        for i in range(self.arr[0][1]):
+            self.items.append([self.arr[0][2*i+3], self.arr[0][2*i+2], i])
+        self.items.sort(key=lambda x: x[0] / x[1], reverse=True)
+        print(self.items)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -414,31 +470,117 @@ class Analyzer(Interface):
 
     def backtrackBegin(self):
         self.showInfo(f'回溯开始\nBacktracking Begin\nStep {self.step}')
-        self.arr[1].append(self.bestV)
-        self.arr[1].append(self.curW)
-        self.arr[1].append(self.curV)
-        self.value = 0
-        self.depth = 0
+        self.stackValue.append(self.value+1)
+        self.deep += 1
         self.pushStack()
-        self.cur = [0, 0, 0]
-        self.stack = []
         self.next_state = 'backtrack'
+        self.value += 1
         self.list.addItem(QListWidgetItem(f'Call f({self.value}).'))
     
     def backtrack(self):
         self.showInfo(f'回溯\nBacktracking\nStep {self.step}')
         if self.getNum(0, 2):
             if self.value >= self.arr[0][1]:
-                self.next_state = 'back'
+                self.next_state = 'readBestV'
                 self.list.addItem(QListWidgetItem(f'Compare Value {self.arr[0][1]} and go back.'))
             else:
                 self.next_state = 'traverse'
                 self.list.addItem(QListWidgetItem(f'Compare Weight {self.arr[0][1]} and go next.'))
     
-    def back(self):
-        self.showInfo(f'回溯至最初\nBacktracking\nStep {self.step}')
-        ...
+    def readBestV(self):
+        self.showInfo(f'读取BestV\nRead BestV\nStep {self.step}')
+        if self.getNum(1, 0):
+            self.next_state = 'readCurV'
+            self.list.addItem(QListWidgetItem(f'Read BestV {self.arr[1][0]}.'))
+    
+    def readCurV(self):
+        self.showInfo(f'读取CurV\nRead CurV\nStep {self.step}')
+        if self.getNum(1, 1):
+            self.next_state = 'cmpV'
+            self.list.addItem(QListWidgetItem(f'Read CurV {self.arr[1][1]}.'))
+    
+    def cmpV(self):
+        self.showInfo(f'比较Value\nCompare Value\nStep {self.step}')
+        if self.getNum(1, 0):
+            if self.bestV < self.curV:
+                self.bestV = self.curV
+                self.arr[1][0] = self.bestV
+                self.next_state = 'writeX'
+            else:
+                self.next_state = 'backtrackEnd'
+            self.list.addItem(QListWidgetItem(f'Compare Value {self.arr[1][0]} and go back.'))
+    
+    def writeX(self):
+        self.showInfo(f'写入X\nWrite X\nStep {self.step}')
+        self.bestX = self.arr[2]
+        self.list.addItem(QListWidgetItem(f'Write X {self.arr[2][self.value-1]}.'))
+        self.next_state = 'backtrackEnd'
     
     def traverse(self):
         self.showInfo(f'继续\nTraversing next\nStep {self.step}')
-        ...
+        if self.getNum(0, 2*self.value+2) and self.getNum(1, 1):
+            if self.curW + self.arr[0][2*self.value+2] <= self.arr[0][0]:
+                self.next_state = 'input'
+                self.list.addItem(QListWidgetItem(f'Input {self.arr[0][2*self.value+2]}.'))
+            else:
+                self.next_state = 'notInput'
+                self.list.addItem(QListWidgetItem(f'Not input {self.arr[0][2*self.value+2]} and go back.'))
+    
+    def input(self):
+        self.showInfo(f'放入\nInput\nStep {self.step}')
+        if self.getNum(2, self.value):
+            self.arr[2][self.value] = 1
+            self.next_state = 'writeCurW'
+            self.list.addItem(QListWidgetItem(f'Input {self.arr[0][2*self.value+2]} and go next.'))
+    
+    def writeCurW(self):
+        self.showInfo(f'写入CurW\nWrite CurW\nStep {self.step}')
+        if self.getNum(1, 1):
+            self.curW += self.arr[0][2*self.value+2]
+            self.arr[1][1] = self.curW
+            self.next_state = 'writeCurV'
+            self.list.addItem(QListWidgetItem(f'Write CurW {self.arr[1][1]}.'))
+    
+    def writeCurV(self):
+        self.showInfo(f'写入CurV\nWrite CurV\nStep {self.step}')
+        if self.getNum(1, 2):
+            self.curV += self.arr[1][1]
+            self.arr[1][2] = self.curV
+            self.next_state = 'backtrackBegin'
+            self.stackState.append('removeCurW')
+            self.list.addItem(QListWidgetItem(f'Write CurV {self.arr[1][2]} and go next.'))
+    
+    def removeCurW(self):
+        self.showInfo(f'移除\nRemove\nStep {self.step}')
+        if self.getNum(1, 1):
+            self.curW -= self.arr[0][2*self.value+1]
+            self.arr[1][1] = self.curW
+            self.next_state = 'removeCurV'
+            self.list.addItem(QListWidgetItem(f'Remove {self.arr[0][2*self.value+2]} and go next.'))
+    
+    def removeCurV(self):
+        self.showInfo(f'移除\nRemove\nStep {self.step}')
+        if self.getNum(1, 2):
+            self.curV -= self.arr[1][1]
+            self.arr[1][2] = self.curV
+            self.next_state = 'notInput'
+    
+    def notInput(self):
+        self.showInfo(f'不放入\nNot input\nStep {self.step}')
+        if self.getNum(2, self.value):
+            if self.value == self.arr[0][1]:
+                self.value -= 1
+            else:
+                self.arr[2][self.value] = 0
+            self.list.addItem(QListWidgetItem(f'Input {self.arr[0][2*self.value+2]} and go next.'))
+            self.next_state = 'backtrackBegin'
+    
+    def backtrackEnd(self):
+        self.showInfo(f'回溯结束\nBacktrack End\nStep {self.step}')
+        self.value = self.stackValue.pop()
+        self.next_state = self.stackState.pop()
+
+    def backtrackSuccess(self):
+        self.showInfo(f'回溯成功\nBacktrack Success')
+        self.arr[2] = self.bestX
+        self.simulating = False
