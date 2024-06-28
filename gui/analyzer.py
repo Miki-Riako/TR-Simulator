@@ -9,10 +9,10 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-DEBUG_MODE = True
-# DEBUG_MODE = False
+# DEBUG_MODE = True
+DEBUG_MODE = False
 NEXT = 250
-MODE = 2
+MODE = 3
 
 
 class Analyzer(Interface):
@@ -130,6 +130,9 @@ class Analyzer(Interface):
                 self.maxValue = 0
                 self.arr[1] = [-1, -1 ,-1 ,-1 ,-1, -1]
                 self.startRefreshing = False
+                self.table.setColumnCount(1)
+                self.table.setRowCount(1)
+                self.table.setItem(0, 0, QTableWidgetItem('No Table'))
                 self.next_state = 'readAll'
             elif self.mode == 2:
                 self.weight = []
@@ -859,7 +862,7 @@ class Analyzer(Interface):
             self.curW -= self.arr[0][2*self.value+1]
             self.arr[1][1] = self.curW
             self.next_state = 'removeCurV'
-            self.list.addItem(QListWidgetItem(f'Remove {self.arr[0][2*self.value+2]} and go next.'))
+            self.list.addItem(QListWidgetItem(f'Remove and go next.'))
     
     def removeCurV(self):
         self.showInfo(f'移除\nRemove\nStep {self.step}')
