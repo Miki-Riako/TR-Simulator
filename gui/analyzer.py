@@ -9,7 +9,7 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-# DEBUG_MODE = False
+# DEBUG_MODE = True
 DEBUG_MODE = False
 NEXT = 120
 MODE = 1
@@ -71,22 +71,6 @@ class Analyzer(Interface):
     
     def index(self, x, y):
         return x * (self.arr[0][0]+1) + y
-    
-    def refreshQ(self):
-        if len(self.q) == 0:
-            return
-        if len(self.arr[1]) == 0:
-            self.arr[1].append(self.q[-1]['level'])
-            self.arr[1].append(self.q[-1]['value'])
-            self.arr[1].append(self.q[-1]['weight'])
-            self.arr[1].append(self.q[-1]['flag'])
-            self.arr[1].append(-1)
-            self.arr[1].append(-1)
-        else:
-            self.arr[1][0] = self.q[-1]['level']
-            self.arr[1][1] = self.q[-1]['value']
-            self.arr[1][2] = self.q[-1]['weight']
-            self.arr[1][3] = self.q[-1]['flag']
 
     def pushStack(self):
         self.table.setRowCount(self.table.rowCount()+1)
@@ -138,6 +122,8 @@ class Analyzer(Interface):
                 self.mySet = []
                 self.items = []
                 self.maxValue = 0
+                self.arr[1] = [-1, -1 ,-1 ,-1 ,-1, -1]
+                self.startRefreshing = False
                 self.next_state = 'readAll'
             else:
                 self.bestV = 0
@@ -467,9 +453,32 @@ class Analyzer(Interface):
             self.items.append([self.arr[0][2*i+3], self.arr[0][2*i+2], i])
         self.items.sort(key=lambda x: x[0] / x[1], reverse=True)
         self.q.append({'level': 0, 'value': 0, 'weight': 0, 'flag': -1, 'container': []})
-        self.refreshQ()
-        self.next_state = 'checkQ'
+        if len(self.q) != 0:
+            self.next_state = 'refreshQ'
+            self.refreshed = 'checkQ'
+        else:
+            self.next_state = 'checkQ'
         self.list.addItem(QListWidgetItem(f'Transfer.'))
+
+    def refreshQ(self):
+        self.showInfo(f'刷新Q\nRefresh Q\nStep {self.step}')
+        if not self.startRefreshing and self.getNum(1, 0):
+            self.startRefreshing = True
+        if self.startRefreshing:
+            if len(self.q) == 0:
+                return
+            elif self.cur[1] == 0:
+                self.arr[1][0] = self.q[-1]['level']
+            elif self.cur[1] == 1:
+                self.arr[1][1] = self.q[-1]['value']
+            elif self.cur[1] == 2:
+                self.arr[1][2] = self.q[-1]['weight']
+            elif self.cur[1] == 3:
+                self.arr[1][3] = self.q[-1]['flag']
+                self.startRefreshing = False
+                self.next_state = self.refreshed
+                self.list.addItem(QListWidgetItem(f'Q refreshed.'))
+            self.cur[1] += 1
 
     def checkQ(self):
         self.showInfo(f'检查Q\nCheck Q\nStep {self.step}')
@@ -484,12 +493,19 @@ class Analyzer(Interface):
     def traverseQ(self):
         self.showInfo(f'遍历\nTraverse\nStep {self.step}')
         self.u = self.q.pop(0)
-        self.refreshQ()
-        if self.u['level'] < len(self.items):
-            self.next_state = 'writeLeftValue'
-            self.list.addItem(QListWidgetItem(f'Write left value'))
+        if len(self.q) != 0:
+            self.next_state = 'refreshQ'
+            if self.u['level'] < len(self.items):
+                self.refreshed = 'writeLeftValue'
+                self.list.addItem(QListWidgetItem(f'Write left value'))
+            else:
+                self.refreshed = 'checkQ'
         else:
-            self.next_state = 'checkQ'
+            if self.u['level'] < len(self.items):
+                self.next_state = 'writeLeftValue'
+                self.list.addItem(QListWidgetItem(f'Write left value'))
+            else:
+                self.next_state = 'checkQ'
 
     def writeLeftValue(self):
         self.showInfo(f'写入左值\nWrite left value\nStep {self.step}')
@@ -511,13 +527,16 @@ class Analyzer(Interface):
             self.left = {'level': self.u['level'] + 1, 'value': self.arr[1][4], 'weight': self.arr[1][5], 'flag': 1}
             self.left['bound'] = self.bound(self.left['level'], self.left, self.items, self.arr[0][0])
             self.left['container'] = self.u['container'] + [1]
-            self.refreshQ()
+            if len(self.q) != 0:
+                self.next_state = 'refreshQ'
+                self.refreshed = 'checkRightWeight'
+            else:
+                self.next_state = 'checkRightWeight'
             if self.left['weight'] <= self.arr[0][0]:
                 self.q.append(self.left)
                 if self.left['value'] > self.maxValue:
                     self.maxValue = self.left['value']
                     self.mySet = self.left['container']
-            self.next_state = 'checkRightWeight'
             self.list.addItem(QListWidgetItem(f'check left Weight'))
 
     def checkRightWeight(self):
@@ -526,7 +545,11 @@ class Analyzer(Interface):
             self.right = {'level': self.u['level'] + 1, 'value': self.u['value'], 'weight': self.u['weight'], 'flag': 0}
             self.right['bound'] = self.bound(self.right['level'], self.right, self.items, self.arr[0][0])
             self.right['container'] = self.u['container'] + [0]
-            self.refreshQ()
+            if len(self.q) != 0:
+                self.next_state = 'refreshQ'
+                self.refreshed = 'doWhile'
+            else:
+                self.next_state = 'doWhile'
             if self.right['bound'] > self.maxValue:
                 self.q.append(self.right)
             self.next_state = 'doWhile'
@@ -552,7 +575,6 @@ class Analyzer(Interface):
         self.showInfo(f'结束\nEnd')
         self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
         self.simulating = False
-        print(self.mySet)
 
 
 
