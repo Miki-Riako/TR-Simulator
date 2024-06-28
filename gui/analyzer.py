@@ -77,6 +77,12 @@ class Analyzer(Interface):
         self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(self.deep)))
         self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(self.value)))
 
+    def pushStackBack(self, i, j, z):
+        self.table.setRowCount(self.table.rowCount()+1)
+        self.table.setItem(self.table.rowCount()-1, 0, QTableWidgetItem(str(i)))
+        self.table.setItem(self.table.rowCount()-1, 1, QTableWidgetItem(str(j)))
+        self.table.setItem(self.table.rowCount()-1, 2, QTableWidgetItem(str(z)))
+
     def getNum(self, index, local):
         if self.cur[index] < local:
             self.cur[index] += 1
@@ -133,6 +139,9 @@ class Analyzer(Interface):
                 self.pushed = False
                 self.p = [[None for __ in range(self.arr[0][0]+1)] for _ in range(self.arr[0][1])]
                 self.decision = [[None for __ in range(self.arr[0][0]+1)] for _ in range(self.arr[0][1])]
+                self.table.setColumnCount(3)
+                self.table.setRowCount(0)
+                self.table.setHorizontalHeaderLabels(['Item', 'Weight', 'Process'])
                 self.next_state = 'readAllMemo'
             else:
                 self.bestV = 0
@@ -599,6 +608,7 @@ class Analyzer(Interface):
         self.showInfo(f'函数调用\nFunction Call\nStep {self.step}')
         if not self.pushed:
             self.stackBack = [(self.arr[0][1]-1, self.arr[0][0], 'start')]
+            self.pushStackBack(self.arr[0][1]-1, self.arr[0][0], 'start')
             self.arr[1].append(self.arr[0][0])
             self.cur[1] += 1
             self.pushed = True
@@ -638,7 +648,6 @@ class Analyzer(Interface):
         w = self.w
         not_included = self.p[i-1][w] if i > 0 else 0
         included = self.p[i-1][w-self.weight[i]]+self.value[i] if w-self.weight[i] >= 0 else -1
-        print(not_included, included)
         if included > not_included:
             self.p[i][w] = included
             self.decision[i][w] = True
@@ -681,6 +690,7 @@ class Analyzer(Interface):
         self.showInfo(f'继续决策\nContinue to Decision\nStep {self.step}')
         if not self.pushed:
             self.stackBack.append((self.i, self.w, 'calc'))
+            self.pushStackBack(self.i, self.w, 'calc')
             self.arr[1].append(self.w)
             self.cur[1] += 1
             self.pushed = True
@@ -696,6 +706,7 @@ class Analyzer(Interface):
         if self.i > 0:
             if not self.pushed:
                 self.stackBack.append((self.i-1, self.w, 'start'))
+                self.pushStackBack(self.i-1, self.w, 'start')
                 self.arr[1].append(self.w)
                 self.cur[1] += 1
                 self.pushed = True
@@ -714,6 +725,7 @@ class Analyzer(Interface):
         if self.w - self.weight[self.i] >= 0:
             if not self.pushed:
                 self.stackBack.append((self.i-1, self.w-self.weight[self.i], 'start'))
+                self.pushStackBack(self.i-1, self.w-self.weight[self.i], 'start')
                 self.arr[1].append(self.w-self.weight[self.i])
                 self.cur[1] += 1
                 self.pushed = True
