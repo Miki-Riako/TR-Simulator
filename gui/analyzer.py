@@ -9,10 +9,10 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-# DEBUG_MODE = True
-DEBUG_MODE = False
-NEXT = 120
-MODE = 1
+DEBUG_MODE = True
+# DEBUG_MODE = False
+NEXT = 250
+MODE = 2
 
 
 class Analyzer(Interface):
@@ -125,6 +125,15 @@ class Analyzer(Interface):
                 self.arr[1] = [-1, -1 ,-1 ,-1 ,-1, -1]
                 self.startRefreshing = False
                 self.next_state = 'readAll'
+            elif self.mode == 2:
+                self.weight = []
+                self.value = []
+                self.stackBack = []
+                self.maxValue = -1
+                self.pushed = False
+                self.p = [[None for __ in range(self.arr[0][0]+1)] for _ in range(self.arr[0][1])]
+                self.decision = [[None for __ in range(self.arr[0][0]+1)] for _ in range(self.arr[0][1])]
+                self.next_state = 'readAllMemo'
             else:
                 self.bestV = 0
                 self.curW = 0
@@ -576,6 +585,177 @@ class Analyzer(Interface):
         self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
         self.simulating = False
 
+
+    def readAllMemo(self):
+        self.showInfo(f'读取所有\nRead All\nStep {self.step}')
+        if self.getNum(0, len(self.arr[0])-1):
+            for i in range(self.arr[0][1]):
+                self.weight.append(self.arr[0][2*i+2])
+                self.value.append(self.arr[0][2*i+3])
+            self.next_state = 'backpack'
+            self.list.addItem(QListWidgetItem(f'Read All.'))
+
+    def backpack(self):
+        self.showInfo(f'函数调用\nFunction Call\nStep {self.step}')
+        if not self.pushed:
+            self.stackBack = [(self.arr[0][1]-1, self.arr[0][0], 'start')]
+            self.arr[1].append(self.arr[0][0])
+            self.cur[1] += 1
+            self.pushed = True
+        else:
+            self.arr[1].append(self.arr[0][1]-1)
+            self.cur[1] += 1
+            self.pushed = False
+            self.next_state = 'checkBack'
+            self.list.addItem(QListWidgetItem(f'Call function.'))
+
+    def checkBack(self):
+        self.showInfo(f'函数开始\nFunction Start\nStep {self.step}')
+        if self.stackBack:
+            self.next_state = 'backpackBody'
+            self.list.addItem(QListWidgetItem(f'Back checked.'))
+        else:
+            self.next_state = 'endBack'
+            self.list.addItem(QListWidgetItem(f'Back end.'))
+
+    def backpackBody(self):
+        self.showInfo(f'出栈\nPop\nStep {self.step}')
+        if not self.pushed:
+            self.i, self.w, self.state = self.stackBack.pop()
+            self.pushed = True
+        else:
+            self.pushed = False
+            if self.state == 'calc':
+                self.next_state = 'calculate'
+                self.list.addItem(QListWidgetItem(f'To calculate.'))
+            else:
+                self.next_state = 'checkW'
+                self.list.addItem(QListWidgetItem(f'To check weight.'))
+
+    def calculate(self):
+        self.showInfo(f'计算\nCalculate\nStep {self.step}')
+        i = self.i
+        w = self.w
+        not_included = self.p[i-1][w] if i > 0 else 0
+        included = self.p[i-1][w-self.weight[i]]+self.value[i] if w-self.weight[i] >= 0 else -1
+        print(not_included, included)
+        if included > not_included:
+            self.p[i][w] = included
+            self.decision[i][w] = True
+        else:
+            self.p[i][w] = not_included
+            self.decision[i][w] = False
+        self.next_state = 'checkBack'
+        self.list.addItem(QListWidgetItem(f'Compare {included} and {not_included}.'))
+
+    def checkW(self):
+        self.showInfo(f'检查重量\nCheck Weight\nStep {self.step}')
+        if self.w < 0:
+            self.p[self.i][self.w] = -float("inf")
+            self.next_state = 'checkBack'
+            self.list.addItem(QListWidgetItem(f'Weight is negative.'))
+        else:
+            self.next_state = 'checkI'
+            self.list.addItem(QListWidgetItem(f'Weight is positive.'))
+
+    def checkI(self):
+        self.showInfo(f'检查物品\nCheck Item\nStep {self.step}')
+        if self.i < 0:
+            self.p[self.i][self.w] = 0
+            self.next_state = 'checkBack'
+            self.list.addItem(QListWidgetItem(f'Item is negative.'))
+        else:
+            self.next_state = 'checkP'
+            self.list.addItem(QListWidgetItem(f'Item is positive.'))
+
+    def checkP(self):
+        self.showInfo(f'检查背包\nCheck Backpack\nStep {self.step}')
+        if self.p[self.i][self.w] is not None:
+            self.next_state = 'checkBack'
+            self.list.addItem(QListWidgetItem(f'P has been calculated.'))
+        else:
+            self.next_state = 'makeDecision'
+            self.list.addItem(QListWidgetItem(f'P has not been calculated.'))
+    
+    def makeDecision(self):
+        self.showInfo(f'继续决策\nContinue to Decision\nStep {self.step}')
+        if not self.pushed:
+            self.stackBack.append((self.i, self.w, 'calc'))
+            self.arr[1].append(self.w)
+            self.cur[1] += 1
+            self.pushed = True
+        else:
+            self.arr[1].append(self.i)
+            self.cur[1] += 1
+            self.pushed = False
+            self.next_state = 'afterCheckI'
+            self.list.addItem(QListWidgetItem(f'Push item and weight.'))
+    
+    def afterCheckI(self):
+        self.showInfo(f'检查物品\nCheck Item\nStep {self.step}')
+        if self.i > 0:
+            if not self.pushed:
+                self.stackBack.append((self.i-1, self.w, 'start'))
+                self.arr[1].append(self.w)
+                self.cur[1] += 1
+                self.pushed = True
+            else:
+                self.arr[1].append(self.i-1)
+                self.cur[1] += 1
+                self.pushed = False
+                self.next_state = 'afterCheckW'
+                self.list.addItem(QListWidgetItem(f'Not input the item.'))
+        else:
+            self.next_state = 'afterCheckW'
+            self.list.addItem(QListWidgetItem(f'Item is positive.'))
+
+    def afterCheckW(self):
+        self.showInfo(f'检查重量\nCheck Weight\nStep {self.step}')
+        if self.w - self.weight[self.i] >= 0:
+            if not self.pushed:
+                self.stackBack.append((self.i-1, self.w-self.weight[self.i], 'start'))
+                self.arr[1].append(self.w-self.weight[self.i])
+                self.cur[1] += 1
+                self.pushed = True
+            else:
+                self.arr[1].append(self.i-1)
+                self.cur[1] += 1
+                self.pushed = False
+                self.next_state = 'checkBack'
+                self.list.addItem(QListWidgetItem(f'Input the item.'))
+        else:
+            self.next_state = 'checkBack'
+            self.list.addItem(QListWidgetItem(f'Item is positive.'))
+
+    def endBack(self):
+        self.showInfo(f'记录结束\nMemorizing End\nStep {self.step}')
+        self.maxValue = self.p[self.arr[0][1]-1][self.arr[0][0]]
+        i = self.arr[0][1] - 1
+        w = self.arr[0][0]
+        self.solution = []
+        while i >= 0:
+            if self.decision[i][w]:
+                self.solution.append(i)
+                w -= self.weight[i]
+            i -= 1
+        self.ans = self.solution.pop()
+        self.next_state = 'writeSolution'
+        self.list.addItem(QListWidgetItem(f'Memorizing End.'))
+    
+    def writeSolution(self):
+        self.showInfo(f'写入解\nWrite Solution\nStep {self.step}')
+        if self.getNum(2, self.ans):
+            self.arr[2][self.cur[2]] = 1
+            if self.solution:
+                self.ans = self.solution.pop()
+            else:
+                self.next_state = 'endMemo'
+            self.list.addItem(QListWidgetItem(f'Write Solution {self.ans}.'))
+
+    def endMemo(self):
+        self.showInfo(f'结束\nEnd')
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
+        self.simulating = False
 
 
 
