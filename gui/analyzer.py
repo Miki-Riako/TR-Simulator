@@ -9,8 +9,10 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
+# DEBUG_MODE = False
 DEBUG_MODE = False
-NEXT = 450
+NEXT = 120
+MODE = 1
 
 
 class Analyzer(Interface):
@@ -46,6 +48,7 @@ class Analyzer(Interface):
         self.next_state = 'readCapacity'
         self.mode = 0
         if DEBUG_MODE:
+            self.setMode(MODE)
             self.simulate()
             for _ in range(NEXT):
                 self.next()
@@ -68,6 +71,22 @@ class Analyzer(Interface):
     
     def index(self, x, y):
         return x * (self.arr[0][0]+1) + y
+    
+    def refreshQ(self):
+        if len(self.q) == 0:
+            return
+        if len(self.arr[1]) == 0:
+            self.arr[1].append(self.q[-1]['level'])
+            self.arr[1].append(self.q[-1]['value'])
+            self.arr[1].append(self.q[-1]['weight'])
+            self.arr[1].append(self.q[-1]['flag'])
+            self.arr[1].append(-1)
+            self.arr[1].append(-1)
+        else:
+            self.arr[1][0] = self.q[-1]['level']
+            self.arr[1][1] = self.q[-1]['value']
+            self.arr[1][2] = self.q[-1]['weight']
+            self.arr[1][3] = self.q[-1]['flag']
 
     def pushStack(self):
         self.table.setRowCount(self.table.rowCount()+1)
@@ -421,6 +440,8 @@ class Analyzer(Interface):
         self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}.'))
         self.simulating = False
 
+
+
     def bound(self, i, current_node, items, w):
         re_weight = w - current_node['weight']
         bound = current_node['value']
@@ -434,8 +455,6 @@ class Analyzer(Interface):
             i += 1
         return bound
 
-
-
     def readAll(self):
         self.showInfo(f'读取所有\nRead All\nStep {self.step}')
         if self.getNum(0, len(self.arr[0])-1):
@@ -447,23 +466,93 @@ class Analyzer(Interface):
         for i in range(self.arr[0][1]):
             self.items.append([self.arr[0][2*i+3], self.arr[0][2*i+2], i])
         self.items.sort(key=lambda x: x[0] / x[1], reverse=True)
-        print(self.items)
+        self.q.append({'level': 0, 'value': 0, 'weight': 0, 'flag': -1, 'container': []})
+        self.refreshQ()
+        self.next_state = 'checkQ'
+        self.list.addItem(QListWidgetItem(f'Transfer.'))
+
+    def checkQ(self):
+        self.showInfo(f'检查Q\nCheck Q\nStep {self.step}')
+        if self.q:
+            self.next_state = 'traverseQ'
+            self.list.addItem(QListWidgetItem(f'Q checked.'))
+        else:
+            self.writeQ = 0
+            self.next_state = 'writeAnsQ'
+            self.list.addItem(QListWidgetItem(f'End.'))
+
+    def traverseQ(self):
+        self.showInfo(f'遍历\nTraverse\nStep {self.step}')
+        self.u = self.q.pop(0)
+        self.refreshQ()
+        if self.u['level'] < len(self.items):
+            self.next_state = 'writeLeftValue'
+            self.list.addItem(QListWidgetItem(f'Write left value'))
+        else:
+            self.next_state = 'checkQ'
+
+    def writeLeftValue(self):
+        self.showInfo(f'写入左值\nWrite left value\nStep {self.step}')
+        if self.getNum(1, 4):
+            self.arr[1][4] = self.u['value'] + self.items[self.u['level']][0]
+            self.next_state = 'writeLeftWeight'
+            self.list.addItem(QListWidgetItem(f'Write left weight'))
+
+    def writeLeftWeight(self):
+        self.showInfo(f'写入左值\nWrite left weight\nStep {self.step}')
+        if self.getNum(1, 5):
+            self.arr[1][5] = self.u['weight'] + self.items[self.u['level']][1]
+            self.next_state = 'checkLeftWeight'
+            self.list.addItem(QListWidgetItem(f'Write left weight'))
+
+    def checkLeftWeight(self):
+        self.showInfo(f'检查左值\nCheck left weight\nStep {self.step}')
+        if self.getNum(0, 0) and self.getNum(1, 3):
+            self.left = {'level': self.u['level'] + 1, 'value': self.arr[1][4], 'weight': self.arr[1][5], 'flag': 1}
+            self.left['bound'] = self.bound(self.left['level'], self.left, self.items, self.arr[0][0])
+            self.left['container'] = self.u['container'] + [1]
+            self.refreshQ()
+            if self.left['weight'] <= self.arr[0][0]:
+                self.q.append(self.left)
+                if self.left['value'] > self.maxValue:
+                    self.maxValue = self.left['value']
+                    self.mySet = self.left['container']
+            self.next_state = 'checkRightWeight'
+            self.list.addItem(QListWidgetItem(f'check left Weight'))
+
+    def checkRightWeight(self):
+        self.showInfo(f'写入左值\nWrite left value\nStep {self.step}')
+        if self.getNum(0, 0) and self.getNum(1, 3):
+            self.right = {'level': self.u['level'] + 1, 'value': self.u['value'], 'weight': self.u['weight'], 'flag': 0}
+            self.right['bound'] = self.bound(self.right['level'], self.right, self.items, self.arr[0][0])
+            self.right['container'] = self.u['container'] + [0]
+            self.refreshQ()
+            if self.right['bound'] > self.maxValue:
+                self.q.append(self.right)
+            self.next_state = 'doWhile'
+            self.list.addItem(QListWidgetItem(f'check right Weight'))
     
+    def doWhile(self):
+        self.showInfo(f'排序并重新循环\nSort and return while\nStep {self.step}')
+        self.q.sort(key=lambda x: x['bound'], reverse=True)
+        self.next_state = 'checkQ'
+        self.list.addItem(QListWidgetItem(f'Sort and return while'))
 
+    def writeAnsQ(self):
+        self.showInfo(f'写入AnsQ\nStep {self.step}')
+        if self.writeQ < len(self.mySet):
+            if self.getNum(2, self.items[self.writeQ][2]):
+                if self.mySet[self.writeQ] == 1:
+                    self.arr[2][self.cur[2]] = 1
+                self.writeQ += 1
+        else:
+            self.next_state = 'endQ'
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def endQ(self):
+        self.showInfo(f'结束\nEnd')
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
+        self.simulating = False
+        print(self.mySet)
 
 
 
