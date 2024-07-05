@@ -11,8 +11,8 @@ from qfluentwidgets import FluentIcon as FIF
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
 DEBUG_MODE = True
 # DEBUG_MODE = False
-NEXT = 500
-MODE = 1
+NEXT = 1000
+MODE = 0
 TAPE = True
 # TAPE = False
 CAPACITY = 50
@@ -291,6 +291,8 @@ class Analyzer(Interface):
         getattr(self, self.next_state)()
         self.tape.set(self.arr)
         self.tape.current(self.cur)
+    
+    
     
     def readCapacity(self):
         self.showInfo(f'读取容量\nReading capacity\nStep {self.step}')
