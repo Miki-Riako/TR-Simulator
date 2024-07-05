@@ -11,10 +11,10 @@ from qfluentwidgets import FluentIcon as FIF
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
 DEBUG_MODE = True
 # DEBUG_MODE = False
-NEXT = 1000
+NEXT = 500
 MODE = 0
-TAPE = True
-# TAPE = False
+# TAPE = True
+TAPE = False
 CAPACITY = 50
 NUM = 5
 INFO_W = ['5', '15', '25', '27', '30']
@@ -234,6 +234,8 @@ class Analyzer(Interface):
         w.show()
 
     def showInfo(self, text):
+        if DEBUG_MODE:
+            return
         InfoBar.success(
             title='Next',
             content=text,
@@ -308,6 +310,10 @@ class Analyzer(Interface):
     
     def readWeight(self):
         self.showInfo(f'读取重量\nReading weight\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[0]-(2*self.nowRow+2))
+            self.cur[0] = 2*self.nowRow+2
+        
         if self.cur[0] < 2*self.nowRow+2:
             self.cur[0] += 1
         elif self.cur[0] > 2*self.nowRow+2:
@@ -328,18 +334,22 @@ class Analyzer(Interface):
             if self.nowCol < self.arr[0][0]+1:
                 nowWeight = self.arr[0][self.cur[0]-1]
                 nowValue = self.arr[0][self.cur[0]]
+                
                 if self.nowRow == self.arr[0][1]-1:
                     self.dp[self.nowRow][self.nowCol] = nowValue if nowWeight <= self.nowCol else 0
                     self.table.setItem(self.nowRow, self.nowCol, QTableWidgetItem(str(self.dp[self.nowRow][self.nowCol])))
                     self.next_state = 'writeM'
                 else:
                     self.next_state = 'readM'
+                
                 self.arr[1].insert(self.nowCol, self.dp[self.nowRow][self.nowCol])
                 self.cur[1] = self.nowCol
                 self.list.addItem(QListWidgetItem(f'Writing DP Matrix {self.dp[self.nowRow][self.nowCol]}.'))
                 self.nowCol += 1
+            
             if self.nowCol >= self.arr[0][0]+1:
                 self.nowCol = 0
+                
                 if self.nowRow == 0:
                     self.optimal = [0, self.arr[0][0]]
                     self.next_state = 'readW'
@@ -353,6 +363,10 @@ class Analyzer(Interface):
     
     def readM(self):
         self.showInfo(f'读取DP数组\nRead DP Matrix\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[1]-2*self.nowCol)
+            self.cur[1] = 2*self.nowCol
+        
         if self.cur[1] < 2*self.nowCol:
             self.cur[1] += 1
         elif self.cur[1] > 2*self.nowCol:
@@ -369,6 +383,10 @@ class Analyzer(Interface):
     
     def calM(self):
         self.showInfo(f'计算DP数组\nCalculate DP Matrix\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[1]-(len(self.arr[1])-1))
+            self.cur[1] = len(self.arr[1])-1
+        
         if self.cur[1] < len(self.arr[1])-1:
             self.cur[1] += 1
         elif self.cur[1] > len(self.arr[1])-1:
@@ -400,6 +418,10 @@ class Analyzer(Interface):
     
     def readW(self):
         self.showInfo(f'读取物品重量\nRead Weight\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[0]-(2*self.nowRow+2))
+            self.cur[0] = 2*self.nowRow+2
+        
         if self.cur[0] < 2*self.nowRow+2:
             self.cur[0] += 1
         elif self.cur[0] > 2*self.nowRow+2:
@@ -410,6 +432,10 @@ class Analyzer(Interface):
     
     def ansM(self):
         self.showInfo(f'回溯最优解\nBacktracking\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[1]-self.index(self.optimal[0], self.optimal[1]))
+            self.cur[1] = self.index(self.optimal[0], self.optimal[1])
+        
         if self.cur[1] < self.index(self.optimal[0], self.optimal[1]):
             self.cur[1] += 1
         elif self.cur[1] > self.index(self.optimal[0], self.optimal[1]):
@@ -420,6 +446,10 @@ class Analyzer(Interface):
     
     def cmpAnsM(self):
         self.showInfo(f'比较最优解\nCompare Answer\nStep {self.step}')
+        if DEBUG_MODE:
+            self.step += abs(self.cur[1]-self.index(self.optimal[0]+1, self.optimal[1]))
+            self.cur[1] = self.index(self.optimal[0]+1, self.optimal[1])
+        
         if self.cur[1] < self.index(self.optimal[0]+1, self.optimal[1]):
             self.cur[1] += 1
         elif self.cur[1] > self.index(self.optimal[0]+1, self.optimal[1]):
