@@ -11,9 +11,14 @@ from qfluentwidgets import FluentIcon as FIF
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
 DEBUG_MODE = True
 # DEBUG_MODE = False
-NEXT = 250
-MODE = 3
-
+NEXT = 500
+MODE = 1
+TAPE = True
+# TAPE = False
+CAPACITY = 50
+NUM = 5
+INFO_W = ['5', '15', '25', '27', '30']
+INFO_V = ['12', '30', '44', '46', '50']
 
 class Analyzer(Interface):
     def __init__(self, text: str, parent=None):
@@ -49,6 +54,12 @@ class Analyzer(Interface):
         self.mode = 0
         if DEBUG_MODE:
             self.setMode(MODE)
+            if TAPE:
+                self.initial.c = CAPACITY
+                self.initial.n = NUM
+                self.initial.infos_w = INFO_W
+                self.initial.infos_v = INFO_V
+                self.initial.reset()
             self.simulate()
             for _ in range(NEXT):
                 self.next()
@@ -441,7 +452,7 @@ class Analyzer(Interface):
     
     def success(self):
         self.showInfo(f'成功\nSuccess')
-        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}.'))
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.dp[0][self.arr[0][0]]}. Steps: {self.step}.'))
         self.simulating = False
 
 
@@ -591,7 +602,7 @@ class Analyzer(Interface):
 
     def endQ(self):
         self.showInfo(f'结束\nEnd')
-        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}. Steps: {self.step}.'))
         self.simulating = False
 
 
@@ -766,7 +777,7 @@ class Analyzer(Interface):
 
     def endMemo(self):
         self.showInfo(f'结束\nEnd')
-        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}.'))
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.maxValue}. Steps: {self.step}.'))
         self.simulating = False
 
 
@@ -830,20 +841,18 @@ class Analyzer(Interface):
         self.cur[1] += 1
         self.bestX = self.ansX[:]
         self.next_state = 'writeAnsBack'
-        self.get = False
+        self.get = 0
         self.list.addItem(QListWidgetItem(f'Write BestV {self.bestV}.'))
     
     def writeAnsBack(self):
         self.showInfo(f'写入Ans\nWrite Ans\nStep {self.step}')
-        if self.get:
-            self.arr[2][self.cur[2]] = self.bestX[self.cur[2]]
+        if self.getNum(0, self.get):
+            self.arr[2][self.get] = self.bestX[self.get]
             self.cur[2] += 1
-            if self.cur[2] == 3:
+            self.get += 1
+            if self.get == self.arr[0][1]:
                 self.next_state = 'checkStack'
-            self.list.addItem(QListWidgetItem(f'Write Ans {self.bestX[self.cur[2]-1]}.'))
-        else:
-            if self.getNum(0, 0):
-                self.get = True
+            self.list.addItem(QListWidgetItem(f'Write Ans {self.bestX[self.get-1]}.'))
     
     def getBacktrack(self):
         self.showInfo(f'获取回溯\nGet Backtrack\nStep {self.step}')
@@ -895,5 +904,5 @@ class Analyzer(Interface):
     
     def backtrackEnd(self):
         self.showInfo(f'回溯结束\nBacktracking End\nStep {self.step}')
-        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.bestV}.'))
+        self.list.addItem(QListWidgetItem(f'The optimal solution is {self.bestV}. Steps: {self.step}.'))
         self.simulating = False

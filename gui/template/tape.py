@@ -38,10 +38,6 @@ class InitialTape(TableWidget):
             header[0] = 'n'
             header[1] = 'k'
             self.setHorizontalHeaderLabels(header)
-            # self.resizeColumnsToContents()
-            # self.resizeRowsToContents()
-            # for column in range(self.columnCount()):
-            #     self.setColumnWidth(column, self.columnWidth(column) + 10)
         except:
             return
 
@@ -147,7 +143,6 @@ class InitialKnapsackTape(TableWidget):
         self.n += 1
         self.infos_w.append(None)
         self.infos_v.append(None)
-        # self.setItem(0, len(self.infos)-1, QTableWidgetItem(None))
         self.reset()
 
     def removeItem(self):
