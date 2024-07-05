@@ -9,12 +9,12 @@ from qfluentwidgets import TreeWidget, TableWidget, ListWidget, HorizontalFlipVi
 from qfluentwidgets import FluentIcon as FIF
 
 URL = 'https://github.com/Miki-Riako/TR-Simulator/blob/main/gui/analyzer.py'
-DEBUG_MODE = True
-# DEBUG_MODE = False
-NEXT = 500
+# DEBUG_MODE = True
+DEBUG_MODE = False
+NEXT = 1000
 MODE = 0
-# TAPE = True
-TAPE = False
+TAPE = True
+# TAPE = False
 CAPACITY = 50
 NUM = 5
 INFO_W = ['5', '15', '25', '27', '30']
@@ -357,9 +357,17 @@ class Analyzer(Interface):
                     self.nowRow -= 1
                     self.next_state = 'readWeight'
         elif self.cur[1] < self.nowCol:
-            self.cur[1] += 1
+            if DEBUG_MODE:
+                self.step += abs(self.cur[1]-self.nowCol)-1
+                self.cur[1] = self.nowCol
+            else:
+                self.cur[1] += 1
         else:
-            self.cur[1] -= 1
+            if DEBUG_MODE:
+                self.step += abs(self.cur[1]-self.nowCol)-1
+                self.cur[1] = self.nowCol
+            else:
+                self.cur[1] -= 1
     
     def readM(self):
         self.showInfo(f'读取DP数组\nRead DP Matrix\nStep {self.step}')
